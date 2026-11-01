@@ -1,0 +1,100 @@
+import { dataVersion } from './data-version.mjs';
+import {
+  access,
+  cp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { runtimeBuildings } from './runtime-data.mjs';
+const root = fileURLToPath(new URL('../', import.meta.url));
+const repository =
+  process.env.GITHUB_REPOSITORY?.split('/').at(-1) ?? 'cupd-compus-3d';
+const basePath = (
+  process.env.PAGES_BASE_PATH ??
+  (repository.endsWith('.github.io') ? '' : `/${repository}`)
+).replace(/\/$/, '');
+if (
+  !/^(\/[A-Za-z0-9._-]+)*$/.test(basePath) ||
+  basePath.split('/').some((p) => p === '.' || p === '..')
+)
+  throw new Error('无效的 Pages 子路径');
+const version = await dataVersion(
+  path.join(root, 'public/data'),
+  await readFile(path.join(root, 'scripts/runtime-data.mjs')),
+);
+const result = spawnSync(
+  process.execPath,
+  [path.join(root, 'node_modules/vinext/dist/cli.js'), 'build'],
+  {
+    cwd: root,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_BASE_PATH: basePath,
+      NEXT_PUBLIC_DATA_VERSION: version,
+    },
+  },
+);
+if (result.error) throw result.error;
+if (result.status !== 0) process.exit(result.status ?? 1);
+const client = path.join(root, 'dist/client'),
+  out = path.join(root, 'out');
+await rm(out, { recursive: true, force: true });
+await mkdir(out, { recursive: true });
+await cp(client, out, { recursive: true });
+// Pages supplies the repository prefix; Vinext also puts route files beneath it on disk.
+if (basePath) {
+  await cp(path.join(client, basePath.slice(1)), out, { recursive: true });
+  await rm(path.join(out, basePath.slice(1)), { recursive: true, force: true });
+}
+const html = await readFile(path.join(out, 'index.html'), 'utf8');
+if (!html.includes('中国石油大学') || !html.includes(`${basePath}/_next/static/`))
+  throw new Error('静态页面或资源前缀缺失');
+for (const [, url] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+  if (!url.startsWith('/') || url.startsWith('//')) continue;
+  if (!url.startsWith(`${basePath}/`)) throw new Error(`资源缺少前缀：${url}`);
+  await access(path.join(out, url.slice(basePath.length + 1).split('?')[0]));
+}
+const manifest = JSON.parse(
+  await readFile(path.join(out, 'data/models.json'), 'utf8'),
+);
+for (const a of [
+  manifest.base,
+  ...(manifest.trees ? [manifest.trees] : []),
+  ...(manifest.treesNear ? [manifest.treesNear] : []),
+  ...manifest.zones,
+  ...manifest.landmarks,
+  ...(manifest.infrastructure ?? []),
+  ...(manifest.sports ?? []),
+])
+  await access(path.join(out, a.url));
+for (const a of [
+  'data/buildings.json',
+  'data/sources.json',
+  'draco/draco_decoder.wasm',
+  'draco/draco_wasm_wrapper.js',
+  'draco/draco_decoder.js',
+])
+  await access(path.join(out, a));
+// Runtime decoder URLs must all point to the one public copy.
+const media = await readdir(path.join(out, '_next/static/media'));
+if (media.some((file) => file.startsWith('draco_')))
+  throw new Error('构建中存在重复的 Draco 解码器');
+// The page loads buildings.json before creating the scene. Publish only the
+// fields it reads; public/data keeps the full modelling record.
+const buildingsPath = path.join(out, 'data/buildings.json');
+await writeFile(
+  buildingsPath,
+  JSON.stringify(
+    runtimeBuildings(JSON.parse(await readFile(buildingsPath, 'utf8'))),
+  ),
+);
+await rm(path.join(out, '.vite'), { recursive: true, force: true });
+await writeFile(path.join(out, '.nojekyll'), '');
+console.log(`GitHub Pages 静态包：${out}；资源前缀：${basePath || '/'}`);

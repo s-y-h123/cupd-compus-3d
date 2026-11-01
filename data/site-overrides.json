@@ -1,0 +1,533 @@
+{
+  "schemaVersion": 1,
+  "sites": [
+    {
+      "id": "library-north",
+      "buildingId": "relation/11564702",
+      "footprintRevision": "e0e7e9f03a68137ec1fe7603e92e1f4adf1a2ec888cedb382fe01d5a92525ea4",
+      "entranceId": "north",
+      "roadId": "way/699156914",
+      "roadSearchDistance": [
+        20,
+        40
+      ],
+      "gradingFeather": 3,
+      "groundClearance": 0.08,
+      "meshStep": 1,
+      "terrainSubdivisions": 16,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1.0,
+      "roadContactSideMargin": 1.0,
+      "sourceRefs": [
+        "osm",
+        "libraryNorthPlaza2026",
+        "campus2026"
+      ],
+      "evidence": {
+        "pavingPresence": "2026 校方北楼读书月现场图可见台阶前硬质铺地。",
+        "extent": "中央连接沿用已建台阶宽度并接至映射校道边缘；不是完整实景广场边界。宽度、局部高程与坡度均为模型估算。",
+        "grading": "以实际道路三角面和既有台阶基底为接口，削低侵入最低台阶和铺地的粗地形，外围渐变回原三角面；不改变原始 DEM。"
+      }
+    },
+    {
+      "id": "mathematics-north-connection",
+      "type": "side-connection",
+      "buildingId": "way/759129516",
+      "footprintRevision": "77893211c246261b60228fdafffe6229b36e4693f5583b4631c9dd897f7d4dfc",
+      "entranceId": "north-west-secondary",
+      "surfaceId": "way/842784673",
+      "surfaceRevision": "906854ff05205a989ac2ca14de39eafba8ac148c8b074f8d0e593799da9e13c4",
+      "leadDistance": 2.3,
+      "pathWidth": 3.6,
+      "roadSearchDistance": [
+        15,
+        40
+      ],
+      "meshStep": 1,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuMathEnvironment"
+      ],
+      "evidence": {
+        "presence": "学院Environment第3张和校方英文学院图可见北门台阶前硬质铺地，向西接崇文路侧人行空间。",
+        "extent": "仅连接现有北门台阶至OSM way/842784673人行道；3.6米通行宽度、2.3米前出距离及L形范围为照片/地图约束估算，不代表完整院落或车行道路边界。",
+        "grading": "台阶基底取楼栋基准，西端取实际人行道网格平面；局部地形仅在连接铺地下削低，并封闭开放侧缘。",
+        "excluded": "不补未经定位的树、花坛、停车位、栏杆或无障碍设施。"
+      }
+    },
+    {
+      "id": "mathematics-south-connection",
+      "type": "front-connection",
+      "buildingId": "way/759129516",
+      "footprintRevision": "77893211c246261b60228fdafffe6229b36e4693f5583b4631c9dd897f7d4dfc",
+      "entranceId": "southwest-main",
+      "surfaceId": "way/686131235",
+      "surfaceRevision": "9889c1c79a0393b7ba304252bb9b43c66f8c20d9a4d8983ad5edfb1e02d3ebf0",
+      "roadSearchDistance": [
+        5,
+        18
+      ],
+      "meshStep": 2,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuMathEnvironment"
+      ],
+      "evidence": {
+        "presence": "Environment第1张和2024主门合影可见三道台阶前的沥青硬质铺地，方向以既有西南凸部和地图对应。",
+        "extent": "仅以8.4米台阶宽度连接南侧way/686131235映射道路，不主张完整院落真实边界。宽、深和材质范围为估算。",
+        "grading": "沿用楼栋基底与实际道路接口标高，仅在铺地下方降低地形，自由边补侧面。",
+        "excluded": "照片内棕榈未取得可靠点位，未凭相对画面位置增种；未新增车位、花坛或无障碍设施。"
+      }
+    },
+    {
+      "id": "math-center-south-apron",
+      "type": "entry-apron",
+      "buildingId": "way/759129515",
+      "footprintRevision": "8e14f1929a2fd520a067b84dcee70719b35122aee9fa5f29c9c38807c00ca46f",
+      "entranceId": "south-east-main",
+      "apronDepth": 1.4,
+      "gradingFeather": 2,
+      "groundClearance": 0.12,
+      "meshStep": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuMathCenterIntro"
+      ],
+      "evidence": {
+        "presence": "官网具名入口照片可见两阶前的短硬质铺面；未取得延伸至校道的完整边界。",
+        "extent": "宽度沿用6.2米台阶、前出1.4米为照片比例估算；2米整地过渡仅修复粗地形，不表示现实坡道或完整前场。",
+        "grading": "保持楼栋基准和台阶基底0.04米，只降低台阶及短铺地下的侵入地形，外围渐变回实际旧三角面。"
+      }
+    },
+    {
+      "id": "math-center-gallery-apron",
+      "type": "gallery-apron",
+      "buildingId": "way/759129515",
+      "footprintRevision": "8e14f1929a2fd520a067b84dcee70719b35122aee9fa5f29c9c38807c00ca46f",
+      "facade": {
+        "polygon": 0,
+        "ring": 0,
+        "edge": 15,
+        "part": "west-gallery"
+      },
+      "apronDepth": 1,
+      "gradingFeather": 2,
+      "groundClearance": 0.12,
+      "meshStep": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuMathCenterIntro"
+      ],
+      "evidence": {
+        "presence": "具名西楼照片显示底层开放外廊；廊内地板和廊前窄铺地作为入口空间处理。",
+        "extent": "宽度沿用外廊开口，前出1米为照片约束估算；不推断完整前场、道路或种植设施。",
+        "grading": "仅降低外廊内部及窄铺地下方的侵入地形，外侧两米渐变；保留楼体原轮廓、基准和外围地面。"
+      }
+    },
+    {
+      "id": "arts-east-courtyard",
+      "type": "courtyard-paving",
+      "buildingId": "way/759165563",
+      "footprintRevision": "0c70b177f6a4025d91b0758b3e7d0c3fb4a49098e216254aa56f664ced3644ba",
+      "boundaryVertices": [
+        2,
+        3,
+        4,
+        1
+      ],
+      "frameVertices": [
+        3,
+        4
+      ],
+      "contextRevisions": {
+        "way/759165562": "075f97f6d68295c4bd2e9be2018351cb957e8ce1dedf2d35b2a53ae93a25eaba"
+      },
+      "buildingClearance": 0.2,
+      "surfaceOffset": 0.06,
+      "openAreaLocal": [
+        [
+          3,
+          5
+        ],
+        [
+          14,
+          5
+        ],
+        [
+          14,
+          27
+        ],
+        [
+          3,
+          27
+        ]
+      ],
+      "trees": [
+        {
+          "id": "south-canopy",
+          "local": [
+            21,
+            10
+          ],
+          "height": 11,
+          "template": 0,
+          "pitRadius": 1.5
+        },
+        {
+          "id": "north-canopy",
+          "local": [
+            21,
+            24
+          ],
+          "height": 9,
+          "template": 0,
+          "pitRadius": 1.2
+        }
+      ],
+      "sourceRefs": [
+        "osm",
+        "artsCourtyardMaintenance2024",
+        "artsCourtyardEvent2024",
+        "artsEnvironment2024"
+      ],
+      "evidence": {
+        "location": "学院具名中庭合影中，大树后独立楼体及右侧圆形外楼梯，与way/759165562及way/880089960位于主楼东侧的组合对应；采用原主楼第2、3、4、1顶点限定东侧院落，朝向为照片/轮廓人工判读。",
+        "layout": "保洁与活动照片均支持硬质庭院、中央活动留白和边缘大树/小树组合；以两株既有阔叶模板表达少量成组树木，不代表完整逐株清单或榕树精确形态。",
+        "dimensions": "树木局部坐标(21,10)/(21,24)米、高11/9米、树池半径1.5/1.2米及11×22米活动区为估算。局部原点取主楼顶点3，X沿3→4；边界扣除相邻建筑并退让0.2米。圆形土质树池为简化表达，照片中的活动涂装及标识暂未复原。",
+        "ground": "沿实际现有地形三角面铺设，6厘米为防闪烁显示偏移，外缘封入地面。没有院落测绘标高，不据此宣称地面水平、真实坡度或完整道路/门槛连接。"
+      },
+      "stairConnection": {
+        "buildingId": "way/880089960",
+        "footprintRevision": "f4ce57f1546a3cf25e5297619e7275daef6afa3ddfa50d3725361a350f001166",
+        "width": 2.4,
+        "evidence": "2024年中庭活动照片可见庭院硬质铺面、邻楼与右侧圆形外楼梯的相邻关系，但人群遮挡底层接缝。仅补齐既有模型庭院东缘至外楼梯底层平台约0.72米间隙；宽2.4米、连接边界和高程过渡均为模型估算，不据此推断实测坡度、无障碍通道或外围校道路径。"
+      }
+    },
+    {
+      "id": "arts-west-canopy-connection",
+      "type": "canopy-connection",
+      "buildingId": "way/759165563",
+      "footprintRevision": "0c70b177f6a4025d91b0758b3e7d0c3fb4a49098e216254aa56f664ced3644ba",
+      "entranceId": "west-main",
+      "canopyEdge": 4,
+      "roadId": "way/759165561",
+      "roadSearchDistance": [
+        1,
+        20
+      ],
+      "meshStep": 1,
+      "groundClearance": 0.08,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "artsEnvironment2024",
+        "artsEntrancePaving2025"
+      ],
+      "evidence": {
+        "location": "主楼西入口、独立雨棚和鸪江路的位置沿用OSM轮廓；连接仅覆盖雨棚中央前缘至现有准备后路面的范围。",
+        "material": "南侧维修照片显示铺砖与沥青相接；中央连接暂以沥青作有边界的示意延续，不宣称整片前场材料及分缝已复原。",
+        "dimensions": "连接宽度沿用雨棚前缘约11.78米，远端取当前道路实际边界；插值坡面连接既有平台与路面，未依据粗DEM虚构台阶或测绘标高。"
+      }
+    },
+    {
+      "id": "office-north-front-connection",
+      "type": "front-connection",
+      "buildingId": "way/671978896",
+      "footprintRevision": "357568dd98742e237fa5d3bf2a554e33cabbd8651d42425066531ad63cfb5e78",
+      "entranceId": "north-central-main",
+      "surfaceId": "way/948683817",
+      "surfaceRevision": "9722393901dbae530875afa7e1adeea065c259ceba4d02e2d32914bc42b462d9",
+      "roadSearchDistance": [
+        25,
+        45
+      ],
+      "pathWidth": 4.4,
+      "meshStep": 1,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuDonationProjects"
+      ],
+      "evidence": {
+        "presence": "项目册照片可见门前硬质铺地连至前方通行空间，门口未见成组台阶。",
+        "extent": "仅从已定位北向中央门口，以4.4米估算通行宽（限制于中央两柱之间）连接原映射way/948683817道路边；约35米纵深来自既有地图，不当作照片测得完整广场，未补画车位或移动道路。",
+        "grading": "门口取楼栋基准加0.15米估算门槛，远端接实际道路三角面；连接面下削低粗地形并封闭侧面，不新增台阶或声称符合无障碍标准。",
+        "excluded": "不按照片透视猜测树木精确位置、完整铺地边界或停车标线。"
+      }
+    },
+    {
+      "buildingId": "relation/12875606",
+      "footprintRevision": "72fe182dc683d230a671305fc6cbe289a811ac34fb1e6fd67e96c9badc7fd04e",
+      "surfaceId": "way/842784664",
+      "surfaceRevision": "ce0c7d39530b36a212a2f655cb4567fbc5a286739af6670951ff4ad6aa556808",
+      "roadSearchDistance": [
+        1,
+        5
+      ],
+      "meshStep": 0.5,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuCivilEnglishBanner",
+        "gxuCivilExteriorAsset"
+      ],
+      "id": "civil-main-front-connection",
+      "type": "front-connection",
+      "entranceId": "southeast-main",
+      "pathWidth": 3.6,
+      "evidence": {
+        "presence": "官网宽幅及完整正面图可见主门外硬质铺地，门厅前没有成组外台阶。",
+        "extent": "连接原南侧东端主门中央与既有way/842784664路面边，宽3.6米为门洞与柱间净宽约束估算，纵深约2.3米来自现有模型道路边界；不代表完整前庭及环形园路复原。",
+        "grading": "门槛采用既有基准以上0.1米估算，远端接模型道路三角面；下削连接下方粗地形并封闭侧面，不据此声称现场实测标高或无障碍合规。"
+      }
+    },
+    {
+      "buildingId": "relation/12875606",
+      "footprintRevision": "72fe182dc683d230a671305fc6cbe289a811ac34fb1e6fd67e96c9badc7fd04e",
+      "surfaceId": "way/842784664",
+      "surfaceRevision": "ce0c7d39530b36a212a2f655cb4567fbc5a286739af6670951ff4ad6aa556808",
+      "roadSearchDistance": [
+        1,
+        5
+      ],
+      "meshStep": 0.5,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuCivilEnglishBanner",
+        "gxuCivilExteriorAsset"
+      ],
+      "id": "civil-annex-stair-connection",
+      "type": "terraced-stair-connection",
+      "evidence": {
+        "presence": "官网外观照片支持附楼外台阶与前庭通行空间相接，照片不能量取完整前场边界。",
+        "extent": "从既有两段台阶的宽下梯底边连接同一way/842784664路面，宽12米沿用估算梯宽，纵深约2.8米由现有地图约束；作为台阶前短铺地的估算，不扩建整片广场或生成新增导航入口。",
+        "grading": "近端取原台阶baseHeight，最低踏步仍高0.18米，远端接现有道路三角面；仅修整连接面下粗地形，附楼台阶及屋顶不变。"
+      }
+    },
+    {
+      "id": "civil-forecourt-garden",
+      "type": "forecourt-paths",
+      "buildingId": "relation/12875606",
+      "footprintRevision": "72fe182dc683d230a671305fc6cbe289a811ac34fb1e6fd67e96c9badc7fd04e",
+      "surfaceId": "way/842784664",
+      "surfaceRevision": "ce0c7d39530b36a212a2f655cb4567fbc5a286739af6670951ff4ad6aa556808",
+      "boundary": [
+        [
+          -498.5,
+          -865
+        ],
+        [
+          -473,
+          -865
+        ],
+        [
+          -473,
+          -844
+        ],
+        [
+          -498.5,
+          -844
+        ]
+      ],
+      "center": [
+        -484,
+        -856.5
+      ],
+      "radii": [
+        7,
+        4.5
+      ],
+      "pathWidth": 1.2,
+      "branches": [
+        [
+          [
+            -490.5,
+            -856.5
+          ],
+          [
+            -501,
+            -856.5
+          ]
+        ],
+        [
+          [
+            -479.1,
+            -853.3
+          ],
+          [
+            -477,
+            -842
+          ]
+        ]
+      ],
+      "surfaceOffset": 0.12,
+      "sourceRefs": [
+        "osm",
+        "gxuCivilEnglishBanner",
+        "gxuCivilExteriorAsset"
+      ],
+      "evidence": {
+        "location": "学院楼南侧前庭，限定于既有way/842784664南侧与东侧的草地空隙，原道路轮廓和建筑不变。",
+        "layout": "学院官网宽幅及完整正面图显示草坪环路、附楼侧及门前方向的支路。两支路接现有服务路的西、北边界，表达可见的环路与联系关系，不称为测绘复原。",
+        "dimensions": "环路中心(-484,-856.5)、中心线半径7/4.5米、路宽1.2米及支路折线均为照片/地图约束估算；环内保留草地，不新增照片标识牌、石雕或未定位设施。",
+        "ground": "铺面沿实际地形三角面上方0.12米，与已修复服务路使用同一数值偏移；该值不代表真实路缘高。原地形、道路及树位保持。"
+      },
+      "batchWith": "civil-main-front-connection"
+    },
+    {
+      "id": "civil-platform-personnel-connection",
+      "type": "front-connection",
+      "buildingId": "way/957404988",
+      "footprintRevision": "51ade29b126e3eb8ddea57d77d010ce4b0fa7f6bb9efb2d526ac7904e38b5165",
+      "entranceId": "east-personnel",
+      "surfaceId": "way/759332838",
+      "surfaceRevision": "10e21ad4eaddec46ee8cb74ff5f3b41e0981e0b933e84306587ff5d9ad6a4a85",
+      "roadSearchDistance": [
+        0.1,
+        4
+      ],
+      "meshStep": 0.5,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gx720CivilNorthPanorama"
+      ],
+      "evidence": {
+        "presence": "既有地图入口、台阶与前方服务路的短距离接续；照片支持硬质门前地面，精确铺装边界仍未知。",
+        "extent": "沿已采用12米梯宽，从七级台阶最外实体面接入way/759332838边界，间距约0.17–3.03米；不拓宽道路或推断完整前广场。",
+        "grading": "近端保持台阶零基准，远端接修复后的地形上方0.08米服务路，局部下削铺地下方地形。铺面不是实测纵坡，也不是无障碍路线认证。"
+      }
+    },
+    {
+      "id": "animal-south-front-connection",
+      "type": "front-connection",
+      "buildingId": "relation/11564704",
+      "footprintRevision": "ab60e4c791319782664d5134f361ebe26f18461367a016cb8bdfadf65666618c",
+      "entranceId": "south-core",
+      "surfaceId": "way/759185167",
+      "surfaceRevision": "bc58f46288e8a4c12e82bd850f06e421431c6e2d43de6e0c2b47fc5cdb958bc5",
+      "roadSearchDistance": [
+        20,
+        30
+      ],
+      "meshStep": 2,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuAnimalEnglishFacade",
+        "gxuAnimalAlumni2026"
+      ],
+      "evidence": {
+        "presence": "校方英文介绍的具名照片显示两级台阶前连续硬质铺地，2026年门口合影支持原台阶；不从画面推断完整前庭边界。",
+        "extent": "连接已采用的约13.894米全宽台阶与南侧way/759185167服务路的原边界，约24米纵深来自模型地图关系；宽度及铺装材质为估算，不补画未定位的雕像、树池、停车位或两侧完整广场。",
+        "grading": "近端接原台阶下部0.25米基准，远端接实际路面三角网；仅削低连接铺地下方地形并封闭侧面。标高与坡度不是现场测绘或无障碍认证。"
+      }
+    },
+    {
+      "id": "forestry-south-front-connection",
+      "type": "front-connection",
+      "buildingId": "relation/11564703",
+      "footprintRevision": "1a10303f9965a426473446be58d72af6eaac6b01886db45b21a27e839c334300",
+      "entranceId": "south-portico",
+      "surfaceId": "way/759170262",
+      "surfaceRevision": "cb1ea7b688a211c1f22fd312878e2b2010c667dfcbe185a8b273f8da57cfc081",
+      "roadSearchDistance": [
+        5,
+        8
+      ],
+      "meshStep": 2,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.5,
+      "sourceRefs": [
+        "osm",
+        "gxuForestryEntranceBanner",
+        "gxuForestrySouthGate2026"
+      ],
+      "evidence": {
+        "presence": "学院南门具名照片及页头照支持门廊台阶前硬质铺地，未给完整南庭平面。",
+        "extent": "沿既有9米全宽台阶真实外实体边接至way/759170262服务路，约6.2–6.5米深度来自模型地图关系；宽度、铺装材质和标高为估算，不补画未定位的学院石、树池或完整庭院。",
+        "grading": "近端沿用原台阶0.24米起算标高，远端贴合实际路面三角网；仅下削铺地下方地形，保留道路边界。坡度不代表现场测量或无障碍路线认证。"
+      }
+    },
+    {
+      "id": "office-south-front-connection",
+      "type": "front-connection",
+      "buildingId": "way/759132930",
+      "footprintRevision": "4c0966b274526bf2c5c2496a60c82e4131af6f447d81219ad5f7377d11a6d2ca",
+      "entranceId": "west-main",
+      "surfaceId": "way/759628239",
+      "surfaceRevision": "caccab6da72e35ff2bc916f1304f1ed405f4dd72253e75aeef707215871d4099",
+      "roadSearchDistance": [
+        3,
+        5
+      ],
+      "roadSpan": [
+        -11.7,
+        8.0
+      ],
+      "meshStep": 2,
+      "groundClearance": 0.12,
+      "joinOverlap": 0.2,
+      "roadContactDepth": 1,
+      "roadContactSideMargin": 0.3,
+      "sourceRefs": [
+        "osm",
+        "gxuOfficeSouthCleanup2025"
+      ],
+      "evidence": {
+        "presence": "2025年寒假环卫简报具名照片可见分析测试中心四柱门厅、全宽台阶前连续硬质铺地。",
+        "extent": "保留模型24.7549米全宽台阶，约3.4至4.0米外接地图way/759628239服务路；接路横向范围[-11.7,8.0]米、梯形边界及铺装材质为估算。地图路边不足以承接整段等宽铺地，不扩大道路轮廓；不代表完整前场实测平面。",
+        "grading": "近端沿用台阶起算高3.35米，远端贴合实际道路三角网，仅下削连接铺地下的地形；标高与坡度为模型关系，不是实测或无障碍认证。"
+      }
+    },
+    {
+      "id": "materials-east-forecourt",
+      "type": "recessed-entry-ground",
+      "buildingId": "relation/11564999",
+      "footprintRevision": "45ebc66d4707c14423baedc11266da9b8997aaa0336d6b51afa1bca1c2093b94",
+      "entranceId": "east-recessed-entry",
+      "groundClearance": 0.04,
+      "sourceRefs": [
+        "gxuMaterialsEnglishExterior",
+        "gxuMaterialsEntry2022",
+        "gxuMaterialsFacade",
+        "esriMaterialsGroundContext",
+        "osm"
+      ],
+      "evidence": {
+        "presence": "校方正面与设计院斜侧照片均可见向东外伸的台阶、铺装前场和侧向停车。",
+        "extent": "前场铺装向东24米，抬高平台宽32米，两侧停车铺装接南北横向道路。以道路地面配准，避开航拍屋顶视差。北侧停车带由设计院照片支撑，南侧仅按航拍保守表达其边界，不声明实测车位。",
+        "grading": "外部铺装由源场景地面采样；低台阶底2.8米、平台4.0米、主平台6.6米、门厅9.9米，两侧庭院底1.3米为模型相对标高。庭院局部下挖并加挡墙，原DEM不改。 停车带接路边缘另按源场景最终保留路面采样校正，并在整条停车带/通行带宽度内线性过渡，内侧边缘保持原高程；不把DEM与重建道路的差异当作真实路坎。",
+        "road": "北停车带按当前道路边界退让0.03米，南侧保留通行带接南横路；君武路和两侧横路不移动，不让横穿旧服务路穿过台阶或庭院。"
+      }
+    }
+  ]
+}

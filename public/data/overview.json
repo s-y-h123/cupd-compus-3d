@@ -1,0 +1,33 @@
+{
+  "snapshotAt": "2026-10-31T10:08:48.513615+00:00",
+  "buildings": 100,
+  "campusBuildings": 100,
+  "landmarks": 22,
+  "trees": 0,
+  "estimatedHeights": 1,
+  "layers": {
+    "buildings": 100,
+    "roads": 847,
+    "green": 498,
+    "water": 4,
+    "sports": 220,
+    "tree": 0
+  },
+  "coordinateSystem": {
+    "units": "meters",
+    "originLonLat": [
+      116.24050845,
+      40.21605355
+    ],
+    "x": "east",
+    "y": "up",
+    "z": "south"
+  },
+  "modelCoverage": [
+    -573.039,
+    -476.741,
+    573.039,
+    476.84
+  ],
+  "note": "校园 GLB 为用户提供的矢量重建模型；语义图层合并在单网格内。"
+}

@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "units": "meters",
+  "axes": {
+    "x": "east",
+    "y": "up",
+    "z": "south"
+  },
+  "base": {
+    "url": "models/cupb/campus.glb",
+    "bytes": 1781092,
+    "sha256": "466c771f3457dc779172b55f74a383b78923fe03a8e27747941323eb2a492723"
+  },
+  "zones": [],
+  "landmarks": [],
+  "infrastructure": [],
+  "sports": [],
+  "treePriorityPositions": []
+}

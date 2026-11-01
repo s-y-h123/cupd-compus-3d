@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "foundations": [
+    {
+      "id": "civil-platform-foundation",
+      "buildingId": "way/957404988",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 6,
+      "groundOffset": 0,
+      "evidence": "模型修复：实际地形在闭合建筑内高出采用标高最高4.15米，西侧普通服务路穿入北楼及西门厅。仅局部削低地形并裁除冲突路面，保留原DEM、楼体标高、邻楼与D区入口。边界和坡度为模型估算，不代表实测土方或道路改建。",
+      "groundedServiceRoad": {
+        "surfaceId": "way/759096572",
+        "offset": 0.08,
+        "burial": 0.06,
+        "joinFeather": 3,
+        "joinMeshStep": 1.5,
+        "evidence": "原映射西侧服务路，地形上方8厘米为数值贴地偏移；三处接缝保持邻接路面，名义3米方角过渡带内接续。轮廓和建筑裁剪不变，纵坡及侧边封口为模型修复参数，并非实测。",
+        "exportWith": "civil-platform-service"
+      }
+    },
+    {
+      "id": "animal-college-foundation",
+      "buildingId": "relation/11564704",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 6,
+      "groundOffset": 0,
+      "evidence": "模型修复：实际源/基础地形在动物学院闭合侧翼内各101处采样高出采用基准，源最大约0.94米。局部削低地形，保护南入口铺地、道路及邻楼；保留原DEM和楼体标高。范围与坡度为模型估算，不代表实测。",
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      }
+    },
+    {
+      "id": "environment-west-foundation",
+      "buildingId": "way/759170251",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：原环境楼候选的源/基础模型各23个采样地形高于现有楼底超过0.3米，最高约0.57米。只削低西端有冲突的区域，整栋617点复验；矩形截取边界、3米过渡和原楼底均为模型参数，不代表现场土方。保留楼体、原DEM、道路及邻楼；完整楼高、身份和入口继续待证。",
+      "repairBounds": [
+        260,
+        -440,
+        282,
+        -380
+      ]
+    },
+    {
+      "id": "teaching-three-foundation",
+      "buildingId": "way/759132933",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：三教闭合楼体内源/基础各检出10个地形、17个道路侵入采样。保留楼底、轮廓与原DEM，局部削低地形并裁除冲突路面；3米过渡和15米临时导出边缘分段范围为模型参数，不代表现场土方或道路改建。",
+      "roadExportConformMargin": 15
+    },
+    {
+      "id": "forestry-southwest-foundation",
+      "buildingId": "relation/11564703",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "repairBounds": [
+        113,
+        -130,
+        128,
+        -120
+      ],
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：林学院封闭楼体西南角源/基础各4个采样地形高出原采用楼底超过0.3米，最高约0.318米。仅削低西南角局部地形，整栋622点复验；15×10米截取框与3米过渡为模型参数，保留原DEM、楼底、道路及邻楼，不代表现场土方或无障碍设计。"
+    },
+    {
+      "id": "electrical-college-foundation",
+      "buildingId": "way/759096561",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：电气学院源/基础各81个采样地形侵入，最高约2.32米。保持原DEM、采用楼底、道路及邻楼，仅削低闭合楼体及3米过渡内高于楼底的地形；范围与坡度为模型估算，不代表现场土方。"
+    },
+    {
+      "id": "office-north-foundation",
+      "buildingId": "way/671978896",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "repairBounds": [
+        -262,
+        -644,
+        -247,
+        -611
+      ],
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：办公北楼中央北端及西侧翼背面地形进入封闭楼体，原源/基础各483点检查检出15/17处超过0.3米容差，最高约0.33米。保留原楼底、DEM、入口铺地和道路；15×33米截取范围及3米过渡为局部模型修补参数，并非实测土方。修复后仍检查完整楼栋。"
+    },
+    {
+      "id": "physics-west-foundation",
+      "buildingId": "way/957404989",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "repairBounds": [
+        -704,
+        -868,
+        -689,
+        -811
+      ],
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: western closed body intersects terrain by up to 0.8 m. Lower only terrain above the adopted floor datum within the bounded footprint and 3 m transition; retain roads, neighbors, original DEM and building heights. Dimensions are repair estimates, not surveyed grading."
+    },
+    {
+      "id": "materials-northeast-foundation",
+      "buildingId": "relation/11564999",
+      "coreMargin": 0.005,
+      "roadTrimMargin": 0.01,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "repairBounds": [
+        -574,
+        -898,
+        -507,
+        -876
+      ],
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "模型修复：东北封闭主体原有228/227个源/基础采样点地形侵入，最大约1.62米。仅降低局部闭合主体内高于既有楼底的地形，并以3米范围过渡；保留内院、开放框架、楼高、原DEM及周边道路。范围和过渡为模型修补参数，不是实测场地标高。",
+      "roadProtectionMargin": 0
+    },
+    {
+      "id": "light-food-foundation",
+      "buildingId": "way/759080588",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: broad closed-body terrain intrusion reaches about 0.59 m. Lower only terrain above the existing datum within the mapped building and a 3 m transition; retain roads, neighbors, original DEM and building height. This is a model correction, not surveyed grading.",
+      "preserveRoads": true,
+      "roadProtectionMargin": 0
+    },
+    {
+      "id": "bihu-canteen-foundation",
+      "buildingId": "way/759609659",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain intruding into the existing two-storey closed canteen, with a bounded 3 m transition. Preserve the adopted building datum, mapped outline, original DEM, roads and neighboring buildings. This is model grading, not a surveyed site elevation.",
+      "repairBounds": [
+        485,
+        18,
+        535,
+        46
+      ]
+    },
+    {
+      "id": "teaching-five-foundation",
+      "buildingId": "way/759129515",
+      "coreMargin": 0.1,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain intruding into the existing three-part teaching building, with a bounded 3 m transition. Preserve the adopted building datum, mapped outline, original DEM, roads and neighboring buildings. This is model grading, not a surveyed site elevation.",
+      "repairRegions": [
+        [
+          -286,
+          -847,
+          -196,
+          -836
+        ],
+        [
+          -250.5,
+          -850,
+          -196,
+          -846.9
+        ]
+      ]
+    },
+    {
+      "id": "arts-main-foundation",
+      "buildingId": "way/759165563",
+      "repairBounds": [
+        374,
+        -165,
+        405,
+        -90
+      ],
+      "coreMargin": 0.05,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain intruding into the existing three-storey arts college wings, with a bounded 3 m transition. Preserve the adopted building datum, mapped outline, original DEM, roads and neighboring buildings. This is model grading, not a surveyed site elevation."
+    },
+    {
+      "id": "junwu-culture-foundation",
+      "buildingId": "way/759337787",
+      "repairBounds": [
+        -540,
+        -657,
+        -470,
+        -601
+      ],
+      "coreMargin": 0.05,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain crossing the existing closed ground-floor volume. Retain the adopted building datum, footprint, original DEM and roads, with a bounded 3 m transition. This is not a surveyed elevation or a building calibration."
+    },
+    {
+      "id": "engineering-practice-foundation",
+      "buildingId": "way/759079685",
+      "repairBounds": [
+        -274,
+        -1073,
+        -179,
+        -1032
+      ],
+      "coreMargin": 0.05,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain crossing the existing closed ground-floor volume. Retain the adopted building datum, footprint, original DEM and roads, with a bounded 3 m transition. This is not a surveyed elevation or a building calibration."
+    },
+    {
+      "id": "mechanical-center-foundation",
+      "buildingId": "way/759090376",
+      "repairBounds": [
+        -700,
+        -1056,
+        -615,
+        -919
+      ],
+      "coreMargin": 0.05,
+      "roadTrimMargin": 0.4,
+      "haloMeters": 3,
+      "groundOffset": 0,
+      "preserveRoads": true,
+      "roadProtectionMargin": 0.1,
+      "meshSimplification": {
+        "normalTolerance": 0.0001,
+        "weldDistance": 0.0001
+      },
+      "evidence": "Model repair: lower terrain crossing the existing closed ground-floor volume. Retain the adopted building datum, footprint, original DEM and roads, with a bounded 3 m transition. This is not a surveyed elevation or a building calibration."
+    }
+  ]
+}

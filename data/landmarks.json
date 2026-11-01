@@ -1,0 +1,345 @@
+[
+  {
+    "id": "south-gate",
+    "name": "南大门",
+    "category": "landmark",
+    "height": 12.5,
+    "description": "大学东路上的三跨石门，中央高、两侧低，横向红色校名面向南侧。",
+    "detail": "三跨门体、叠檐、石雕与铜鼓形灯参考多角度照片；每根门柱前后小亭等大依据现场反馈记录。门前道路、狭长花岛与斜向斑马线按 2024-11-30 卫星影像人工描图，近年地面照片核对铺装和盆栽；位置精度约 8.47 米，未见背面与细部仍为估算。",
+    "positionBasis": "OSM way/1492215424 的 ceremonial_gate / gatehouse 轮廓定位与宽度；2018—2026 年发布的多角度照片核对形态，高度及构件比例估算。",
+    "sourceUrl": "https://www.openstreetmap.org/way/1492215424",
+    "reference": "gate2026",
+    "distance": 68,
+    "additionalReferences": [
+      "gate2022",
+      "gate2024",
+      "gateOpening2018",
+      "gateOfficial2020",
+      "gateOfficialNight",
+      "gateMsi2024",
+      "gateForecourt2025",
+      "gateSatellite2024"
+    ],
+    "cameraOffset": [
+      -0.16,
+      0.29,
+      1
+    ],
+    "frontBearing": 180,
+    "osmId": "way/1492215424",
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "library",
+    "osmId": "relation/11564702",
+    "name": "图书馆",
+    "category": "academic",
+    "height": 36,
+    "description": "阶梯式楼体围合阅读内院，蓝绿色玻璃、米色墙面与白色镂空檐架构成鲜明的校园地标。",
+    "detail": "保留 OSM 内院与约 11.6° 建筑轴线；南侧为十一层高体量，北侧为较低的中央幕墙与两翼，北向双回形框架、六柱门廊和台阶参考时光之门同框照片。北门按 2026 校方公告采用 6.60×2.55 米门洞及六片玻璃门；36/27/23.5 米体量高度、连廊分区、南侧入口及未见细部仍为参考估算。",
+    "reference": "campus2026",
+    "distance": 180,
+    "additionalReferences": [
+      "campusGallery",
+      "libraryHistory",
+      "libraryNorthDoor2026",
+      "libraryNorthPlaza2026",
+      "libraryConstruction2014",
+      "librarySeats2024",
+      "libraryOpening"
+    ],
+    "cameraOffset": [
+      0.2,
+      0.42,
+      1
+    ],
+    "frontBearing": 191.6,
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "huixue",
+    "osmId": "way/822812173",
+    "name": "汇学堂",
+    "category": "culture",
+    "description": "校园文化活动的重要场所，坡屋顶与柱廊延续西大的建筑记忆。",
+    "detail": "朝东的入口、深青色坡屋顶、竖向柱廊和木色大门。",
+    "reference": "campus2026",
+    "distance": 210,
+    "frontBearing": 90,
+    "cameraOffset": [
+      1,
+      0.66,
+      0.5
+    ],
+    "orientationBasis": "朝向依据 2026-09-09 的现场认知记录设为东向，原记录为南向。",
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "auditorium",
+    "osmId": "way/671978892",
+    "name": "大礼堂",
+    "category": "culture",
+    "description": "校园历史建筑，古典柱式与三角山花共同形成庄重的入口。",
+    "detail": "三角山花、六柱门廊、坡屋顶、基座与连续台阶。",
+    "reference": "campusGallery",
+    "distance": 150,
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "stadium",
+    "osmId": "way/699156920",
+    "name": "综合体育馆",
+    "category": "culture",
+    "height": 24,
+    "description": "西校园的综合体育馆，宽大的浅坡屋盖、竖向柱墩与玻璃入口构成鲜明轮廓。",
+    "detail": "校方视频中的宽大浅坡金属屋盖、屋顶采光构件、竖向柱墩、横向遮阳百叶与玻璃入口。",
+    "reference": "stadiumVideo",
+    "distance": 275,
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "student-center",
+    "osmId": "relation/12774258",
+    "name": "大学生活动中心",
+    "category": "culture",
+    "height": 22,
+    "description": "碧云湖畔的学生活动空间，流线形楼层与连续窗带映入湖中。",
+    "detail": "校方2021视频与建筑学协会2022航拍核对五层曲面主楼、西侧一层水塔平台、内退玻璃与连续阳台。屋顶设备、上部西侧回转轮廓及尺寸按画面估算；背立面与完整入口尚待补证。",
+    "reference": "campus2026",
+    "distance": 195,
+    "modelingBasis": "photo",
+    "additionalReferences": [
+      "studentOfficial2021",
+      "studentArchitecture2022",
+      "studentWalk2020"
+    ]
+  },
+  {
+    "id": "teaching-six",
+    "osmId": "relation/11971046",
+    "name": "第六教学楼",
+    "category": "academic",
+    "description": "东校园的大型教学建筑，围合庭院与连廊形成丰富的空间层次。",
+    "detail": "真实轮廓与三个内院；按校方 2025 年入口示意图补建南北大门、东西侧门及中央底层贯通空间，完善门厅、台阶、挑檐和窗框。入口位置关系有资料依据，宽度、净高、台阶尺寸及未见立面仍为估算；外观照片日期未知。",
+    "reference": "campusGallery",
+    "distance": 235,
+    "additionalReferences": [
+      "teachingSixEntrances2025",
+      "teachingSixDesign"
+    ],
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "teaching-two",
+    "osmId": "way/759129522",
+    "name": "第二教学楼",
+    "category": "academic",
+    "description": "又称南宁楼，位于西校园教学区域，长向楼体与规则窗列构成简洁的教学空间。",
+    "detail": "长向教学体量、规则窗列、中央入口和屋面细节；局部立面按类型推定。",
+    "reference": "campus2024",
+    "distance": 180,
+    "modelingBasis": "type"
+  },
+  {
+    "id": "laboratory",
+    "osmId": "relation/11970474",
+    "name": "综合实验大楼",
+    "category": "academic",
+    "description": "南部校园轴线上的大型实验建筑，与南大门共同构成校园入口景观。",
+    "detail": "正面逐级退台、平顶挑檐、圆柱廊和中央贯通开口；高度按照片比例估算，北立面待核实。",
+    "reference": "campusGallery",
+    "distance": 255,
+    "modelingBasis": "photo",
+    "height": 44,
+    "additionalReferences": [
+      "laboratoryFpv2023"
+    ]
+  },
+  {
+    "id": "computer",
+    "osmId": "way/759129514",
+    "name": "计算机与电子信息学院",
+    "category": "academic",
+    "description": "西校园的教学科研建筑，具有紧凑的高层体量。",
+    "detail": "校方照片中的竖向玻璃核心、粉色侧墙、连续窗格与悬挑平檐；背面和层高结合 OSM 推定。",
+    "reference": "computer2024",
+    "distance": 170,
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "international-residence",
+    "osmId": "way/1076517227",
+    "name": "留学生公寓",
+    "category": "living",
+    "description": "碧云湖东南侧的高层留学生公寓，与国际学院裙楼相连。",
+    "detail": "OSM 24 层轮廓定位；独立重建折角双翼、逐层凹阳台及栏杆、近实墙端面、转角玻璃窗带及顶部镂空框、裙楼遮阳竖板、入口与屋面。楼高按 24×3.3 米估算，塔楼退界和未见立面推定；外观照片拍摄日期未知。",
+    "reference": "apartmentOfficial",
+    "additionalReferences": [
+      "apartmentSite2022",
+      "apartmentUse2024"
+    ],
+    "positionBasis": "OSM way/1076517227 的 24 层标签，校方 2022 设计项目说明所示碧云湖东南侧相对位置及留学生中心外观照片交叉定位。",
+    "distance": 165,
+    "cameraOffset": [
+      0.8,
+      0.44,
+      1
+    ],
+    "frontBearing": 192.1,
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "new-east-gate",
+    "name": "新东门",
+    "placeKind": "gate",
+    "category": "landmark",
+    "lonLat": [
+      108.29342144137495,
+      22.8412081023638
+    ],
+    "height": 10,
+    "gateWidth": 16,
+    "gateDepth": 8,
+    "siteBoundsOffset": [
+      -10,
+      -4,
+      11,
+      8.5
+    ],
+    "frontBearing": 180,
+    "distance": 56,
+    "reference": "newEastPhoto2025",
+    "description": "秀灵路西一里的新东园门，银灰格栅门楼配金色校名，东侧为通往东25栋的门禁通道。",
+    "detail": "按2025年11月发布的正面实拍重建门楼；2026年9月路线视频补充东25栋旁雨棚、门禁、砖铺地、浅色矮墙基座、金属竖栏与绿篱。西侧银灰短墙参考2021年外景，结合2025年内侧全景核对连接关系。位置沿用OSM校道与校界交点；尺度、围合延伸长度、种植布置、未见背面和局部高程为估算，旧墙现状未获近拍确认。",
+    "positionRoad": "way/822812185",
+    "sourceUrl": "https://www.openstreetmap.org/way/822812185",
+    "positionBasis": "2026 校方新东园入口说明，OSM way/822812185 与校界 way/398115378 的交点；并非 OSM 已测绘门楼。",
+    "additionalReferences": [
+      "newEast2026",
+      "newEastIELTS2026",
+      "newEastGuardroom2021",
+      "newEastRoute2026",
+      "newEastExterior2021",
+      "newEastTour2025"
+    ],
+    "cameraOffset": [
+      -0.15,
+      0.36,
+      1
+    ],
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "east-gate",
+    "name": "东门",
+    "placeKind": "gate",
+    "category": "landmark",
+    "lonLat": [
+      108.2961483,
+      22.8473117
+    ],
+    "height": 8,
+    "gateWidth": 22,
+    "gateDepth": 9,
+    "frontBearing": 90,
+    "distance": 47,
+    "reference": "eastGatePhoto",
+    "description": "秀灵路上的三拱石门，宽阔中央拱与两侧小拱、通长平直檐口共同构成入口。",
+    "detail": "按 2018 落成实拍及无日期街景细化三处贯通拱洞、四座凹槽石柱、花饰柱头、叠檐、菱花嵌板与红色立体校名。2025 校方资料核对位置；比例和背面装饰估算，未获得近年完整立面实拍。",
+    "osmId": "node/6579697530",
+    "sourceUrl": "https://www.openstreetmap.org/node/6579697530",
+    "positionBasis": "OSM 门节点；门体占地和高度按参考估算。门体宽度按相邻建筑间的可用净空约束为 22 米，高度估算 8 米，均非实测。",
+    "additionalReferences": [
+      "gateRoads2025",
+      "eastGateStreet"
+    ],
+    "cameraOffset": [
+      1,
+      0.36,
+      0.12
+    ],
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "west-gate",
+    "name": "西门",
+    "placeKind": "gate",
+    "category": "landmark",
+    "lonLat": [
+      108.2802516,
+      22.8450504
+    ],
+    "height": 6.7,
+    "gateWidth": 22,
+    "gateDepth": 11,
+    "frontBearing": 270,
+    "distance": 48,
+    "reference": "westGatePhoto",
+    "description": "鲁班路上的校园入口，林荫校道连接门卫岗亭及通行设施。",
+    "detail": "依据2021年西门内外景及2025年视频，重建斜边竖向校名墙、错层厚檐玻璃门卫室和入口分流护栏。无日期低清图片中的红白高杆无法对应，不再作为门体依据；尺寸、背面及遮棚现状仍需补证。",
+    "osmId": "node/8850695397",
+    "sourceUrl": "https://www.openstreetmap.org/node/8850695397",
+    "positionBasis": "OSM 门节点；门体占地和高度按参考估算。",
+    "additionalReferences": [
+      "gateRoads2025",
+      "westGate2026",
+      "westGateStudy20261027",
+      "westGateVideos20261027"
+    ],
+    "cameraOffset": [
+      -1,
+      0.38,
+      -0.18
+    ],
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "teaching-ten",
+    "osmId": "way/759170254",
+    "name": "第十教学楼",
+    "category": "academic",
+    "navigationOrder": 19,
+    "description": "简称十教，位于东校园时光广场以北，由弧形低层教学区与北侧高层教学翼连接而成，设有智慧教室和报告厅。",
+    "detail": "按 OSM 实际轮廓分区重建弧形低层体量、北侧八层教学翼、圆弧楼梯间、凹进窗列、竖向框架、连廊、入口和屋面女儿墙。外观依据校方图库，拍摄日期未知；2024—2026 年记录核对智慧教室及使用情况。层高、低层分区与入口细节为参考估算，未获得完整近期外立面实测资料。",
+    "reference": "teachingTenGallery",
+    "additionalReferences": [
+      "teachingTen2024",
+      "teachingTen2026",
+      "teachingTenClassrooms2022"
+    ],
+    "positionBasis": "OSM way/759170254 的真实曲线轮廓及 8 层标签；校方多媒体教学楼照片与南低北高、径向侧翼的地图形态交叉核对。",
+    "distance": 150,
+    "frontBearing": 164.4347,
+    "cameraOffset": [
+      0.75,
+      0.5,
+      1
+    ],
+    "modelingBasis": "photo"
+  },
+  {
+    "id": "huicui",
+    "osmId": "relation/11970574",
+    "name": "荟萃楼",
+    "category": "living",
+    "navigationOrder": 20,
+    "description": "位于西校园新闻传播学院共用楼体北翼的校园接待酒店，北侧设通高柱廊和入口雨棚。",
+    "detail": "精细复原北侧分层窗格、通高圆柱廊、金属雨棚、荟萃楼字牌、玻璃门及踏步，保留共用楼体内院。清晰外观依据 2020 年校方全景和更早入口照片；2024—2026 年资料仅核对名称与使用情况。楼层分段、门窗尺寸和未拍到立面为估算。",
+    "reference": "huicuiExterior2020",
+    "additionalReferences": [
+      "huicuiEntrance2018",
+      "huicuiUse2024",
+      "huicuiMaintenance2026",
+      "huicuiLocation"
+    ],
+    "positionBasis": "沿用新闻传播学院同一 OSM 关系及内院，酒店位于北翼；未额外增加重叠建筑。",
+    "distance": 135,
+    "frontBearing": 359.4123,
+    "cameraOffset": [
+      -0.5,
+      0.42,
+      -1
+    ],
+    "modelingBasis": "photo"
+  }
+]

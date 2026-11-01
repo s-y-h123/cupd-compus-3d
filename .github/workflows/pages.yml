@@ -1,0 +1,53 @@
+name: 发布中石大三维校园
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/configure-pages@v5
+        id: pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      # 中石大运行数据直接来自已接入的 GLB/GeoJSON；广西大学离线建模测试不适用于此场景。
+      - run: node scripts/test-cupb-integration.mjs
+      - run: npm run build:pages
+        env:
+          PAGES_BASE_PATH: ${{ (github.event_name == 'pull_request' || github.ref != 'refs/heads/main') && format('/{0}', github.event.repository.name) || steps.pages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          path: out
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布
+        id: deployment
+        uses: actions/deploy-pages@v4
