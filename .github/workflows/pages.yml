@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           cache: npm
       - uses: actions/configure-pages@v5
         id: pages
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
@@ -32,14 +32,14 @@ jobs:
       - run: node scripts/test-cupb-integration.mjs
       - run: npm run build:pages
         env:
-          PAGES_BASE_PATH: ${{ (github.event_name == 'pull_request' || github.ref != 'refs/heads/main') && format('/{0}', github.event.repository.name) || steps.pages.outputs.base_path }}
+          PAGES_BASE_PATH: ${{ (github.event_name == 'pull_request' || github.ref != 'refs/heads/dev') && format('/{0}', github.event.repository.name) || steps.pages.outputs.base_path }}
       - uses: actions/upload-pages-artifact@v4
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
         with:
           path: out
   deploy:
     needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       pages: write

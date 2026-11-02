@@ -53,7 +53,7 @@ npm run preview
 
 ## 4. 发布到 GitHub Pages
 
-`.github/workflows/pages.yml` 在推送 `main` 后执行检查、运行 `npm run build:pages`，上传 `out/` 并发布 Pages。当前仓库的 `AGENTS.md` 规定常规开发在 `dev` 分支进行，发布到 `main` 需要明确授权。首次发布时，在 [项目仓库](https://github.com/s-y-h123/cupd-compus-3d) 的 Settings → Pages 中启用 **GitHub Actions** 作为来源。预期在线地址为 [`https://s-y-h123.github.io/cupd-compus-3d/`](https://s-y-h123.github.io/cupd-compus-3d/)；以部署完成后 GitHub 显示的地址为准。
+`.github/workflows/pages.yml` 在推送 `dev` 后执行检查、运行 `npm run build:pages`，上传 `out/` 并发布 Pages。这样遵守仓库 `AGENTS.md` 的开发分支规则，不需要更新 `main`。首次发布时，在 [项目仓库](https://github.com/s-y-h123/cupd-compus-3d) 的 Settings → Pages 中启用 **GitHub Actions** 作为来源。预期在线地址为 [`https://s-y-h123.github.io/cupd-compus-3d/`](https://s-y-h123.github.io/cupd-compus-3d/)；以部署完成后 GitHub 显示的地址为准。
 
 Pages 子路径由 `scripts/build-pages.mjs` 中的 `PAGES_BASE_PATH` 和仓库名确定。当前仓库使用 `/cupd-compus-3d` 前缀；若将项目改名，须重新构建并核对脚本与数据请求的前缀。构建后确认 `out/data/buildings.json` 和 `out/data/infrastructure-map.json` 存在；发布完成再从实际 Pages 地址访问一次。旧校园 GLB 仍可能随历史资产打包，但页面不请求它。
 
