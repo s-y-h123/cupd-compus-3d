@@ -2,13 +2,14 @@
 
 [简体中文](README.md) · **English**
 
-Project repository: [s-y-h123/cupd-compus-3d](https://github.com/s-y-h123/cupd-compus-3d). This project adapts an open-source Three.js campus map to the Changping campus of China University of Petroleum (Beijing), using a CUPB GLB model and matching geographic data. The interface uses a white dashboard with red accents and includes panorama and first-person viewing modes. The original source copyright notice remains in [LICENSE](LICENSE).
+Project repository: [s-y-h123/cupd-compus-3d](https://github.com/s-y-h123/cupd-compus-3d). This version generates the buildings from CUPB coordinates and uses the road surface extracted from the original campus GLB. It retains the existing React and Three.js interactions, white dashboard with red accents, and overview and first-person modes. The original source copyright notice remains in [LICENSE](LICENSE).
 
 ## Features
 
-- Load `public/models/cupb/campus.glb` as the campus scene, with simple geometry as a fallback if loading fails.
+- Generate varied facades, trees, a running track, and pedestrians from the supplied coordinate data. Roads are loaded from `original-roads.glb`, extracted from the original `campus.glb`.
 - Search buildings and 22 verified landmarks, focus a place, and follow the guided tour.
-- Switch between morning, day, dusk, and night lighting; adjust layers and rendering quality.
+- Switch independently between morning, day, dusk, and night lighting and clear, cloudy, rain, or haze weather with keys 1–4; adjust layers and rendering quality.
+- A north–south rectangular fountain sits in the central open area south of the library, alongside a schematic wall around the model coverage rectangle. The existing north, east, and south gate leaves can be toggled with `setGateOpen(name, open)`. Fountain proportions follow the annotated overhead view; see the deployment guide.
 - Orbit and zoom in panorama mode. In first-person mode, move with WASD, hold Shift to run, drag to look around, and press Home to return to panorama. Touch screens provide a direction pad.
 - Use building footprint and model boundary checks to limit first-person movement.
 
@@ -25,7 +26,7 @@ npm ci
 npm run dev
 ```
 
-Open the address printed by the dev server. Directly opening `index.html` through `file://` cannot reliably load the JSON and GLB assets. For a static preview:
+Open the address printed by the dev server. Directly opening `index.html` through `file://` cannot reliably load the JSON and JavaScript assets. For a static preview:
 
 ```sh
 npm run typecheck
@@ -39,6 +40,6 @@ The static output is in `out/`. The expected GitHub Pages URL is [s-y-h123.githu
 
 ## Data and documentation
 
-The GLB model belongs in `public/models/cupb/`. Model coordinates, camera positions, landmarks, and tour order are configured in `lib/campus/cupb-config.ts`. See the Chinese [deployment and asset guide](docs/CUPB_DEPLOYMENT.md), [repository analysis](docs/CUPB_REPOSITORY_ANALYSIS.md), and [next steps](docs/CUPB_NEXT_STEPS.md).
+The scene is generated from `public/data/buildings.json` and `public/data/infrastructure-map.json`. Camera positions, landmarks, and tour order are configured in `lib/campus/cupb-config.ts`. A future robot dog GLB can be loaded through `SceneController.loadRoboDog(modelUrl)`. See the Chinese [deployment and asset guide](docs/CUPB_DEPLOYMENT.md), [repository analysis](docs/CUPB_REPOSITORY_ANALYSIS.md), and [next steps](docs/CUPB_NEXT_STEPS.md).
 
 The source code and retained assets follow the notices in [LICENSE](LICENSE) and [third-party notices](licenses/THIRD_PARTY.md). OpenStreetMap-derived data retains **© OpenStreetMap contributors** attribution. Verify rights separately for user-supplied models and photos.

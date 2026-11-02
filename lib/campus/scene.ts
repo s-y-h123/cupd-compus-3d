@@ -1,5 +1,6 @@
 import { loadCampusBoundary } from './boundary-data';
 import { CUPB_CONFIG } from './cupb-config';
+import { createProceduralCampus, type PedestrianRouteData } from './procedural-campus';
 import { placeName, translate, type Locale, type Message } from './i18n';
 import { landmarkLabelAnchor } from './labels';
 import { createNightStyle, createRoadLights } from './night';
@@ -67,6 +68,7 @@ import type {
   LandmarkView,
   ViewportFrame,
   ViewMode,
+  Weather,
 } from './types';
 interface Callbacks {
   onStatus: (message: Message, error?: boolean, progress?: number) => void;
@@ -82,6 +84,7 @@ interface Callbacks {
   onOrbit: (on: boolean) => void;
   onCamera: (snapshot: CameraSnapshot) => void;
   onViewMode?: (mode: ViewMode) => void;
+  onWeather?: (weather: Weather) => void;
 }
 export function createScene(
   host: HTMLElement,
@@ -220,11 +223,13 @@ export function createScene(
     });
     return decoder;
   }
-  let draco = createDecoder();
-  loader.setDRACOLoader(draco);
+  let draco: DRACOLoader | null = null;
   let manifest: Manifest | null = null;
   let pendingPrefetch = prefetch;
   let baseRoot: THREE.Group | null = null;
+  let procedural: ReturnType<typeof createProceduralCampus> | null = null;
+  const pedestrianSettings = { count: 96, speed: 1, routesVisible: false };
+  let weather: Weather = 'clear';
   let fallbackActive = false;
   let walkFlatGroundY: number | null = null;
   const walkGroundCache = new Map<string, number>();
@@ -306,6 +311,19 @@ export function createScene(
         scene.fog,
         fogRange(preset, camera.position.distanceTo(controls.target)),
       );
+      if (weather === 'haze') {
+        const distance = camera.position.distanceTo(controls.target);
+        scene.fog.near = viewMode === 'walk' ? 30 : distance * .34;
+        scene.fog.far = viewMode === 'walk' ? 460 : distance + 390;
+      } else if (weather === 'rain') {
+        const distance = camera.position.distanceTo(controls.target);
+        scene.fog.near = viewMode === 'walk' ? 130 : distance * .46;
+        scene.fog.far = viewMode === 'walk' ? 1050 : distance + 850;
+      } else if (weather === 'cloudy') {
+        const distance = camera.position.distanceTo(controls.target);
+        scene.fog.near = viewMode === 'walk' ? 220 : distance * .6;
+        scene.fog.far = viewMode === 'walk' ? 1600 : distance + 1400;
+      }
     }
     renderer.setRenderTarget(null);
     renderer.info.reset();
@@ -401,6 +419,32 @@ export function createScene(
       bounds: [0, 0, 0, 0],
     };
   });
+  // 北门至图书馆东侧的楼名取自建筑足迹，不额外加入巡游点位。
+  const northBuildingIds = new Set(CUPB_CONFIG.northBuildingLabelIds);
+  const buildingLabelNodes = buildings
+    .filter((b) => northBuildingIds.has(b.id) && !b.landmark)
+    .map((b) => {
+      const el = document.createElement('button');
+      el.className = 'map-label map-label-building';
+      el.dataset.buildingId = b.id;
+      const caption = document.createElement('span');
+      caption.className = 'map-label-name';
+      el.appendChild(caption);
+      el.onclick = () => {
+        callbacks.onInteract();
+        focus(b.id);
+      };
+      labels.appendChild(el);
+      return {
+        b,
+        el,
+        caption,
+        point: new THREE.Vector3(b.center[0], b.elevation + b.height + 3, -b.center[1]),
+        width: 0,
+        height: 0,
+        bounds: [0, 0, 0, 0],
+      };
+    });
   const labelOrder = [...labelNodes];
   let orderedHover: string | null | undefined;
   let orderedSelection: string | null | undefined;
@@ -412,13 +456,14 @@ export function createScene(
   function measureLabels() {
     const layerDisplay = labels.style.display;
     labels.style.display = '';
-    const displays = labelNodes.map(({ el }) => el.style.display);
-    for (const { el } of labelNodes) el.style.display = '';
-    for (const node of labelNodes) {
+    const allNodes = [...labelNodes, ...buildingLabelNodes];
+    const displays = allNodes.map(({ el }) => el.style.display);
+    for (const { el } of allNodes) el.style.display = '';
+    for (const node of allNodes) {
       node.width = node.el.offsetWidth;
       node.height = node.el.offsetHeight;
     }
-    labelNodes.forEach(({ el }, i) => {
+    allNodes.forEach(({ el }, i) => {
       el.style.display = displays[i];
     });
     labels.style.display = layerDisplay;
@@ -433,6 +478,12 @@ export function createScene(
     );
     for (const { l, el, caption } of labelNodes) {
       const name = placeName(l.name, locale);
+      caption.textContent = name;
+      el.title = t('查看{name}', { name });
+      el.setAttribute('aria-label', el.title);
+    }
+    for (const { b, el, caption } of buildingLabelNodes) {
+      const name = placeName(b.name, locale);
       caption.textContent = name;
       el.title = t('查看{name}', { name });
       el.setAttribute('aria-label', el.title);
@@ -918,6 +969,7 @@ export function createScene(
       selected,
       view: autoFramed && !orbiting ? selectedView : null,
       preset,
+      weather,
       position: camera.position.toArray() as CameraSnapshot['position'],
       target: controls.target.toArray() as CameraSnapshot['target'],
       span: camera.position.distanceTo(controls.target) * visibleTangent(),
@@ -943,6 +995,7 @@ export function createScene(
   }
   function restoreSnapshot(snapshot: Partial<CameraSnapshot>) {
     if (snapshot.preset) setPreset(snapshot.preset);
+    if (snapshot.weather) setWeather(snapshot.weather);
     if (snapshot.selected) {
       focus(snapshot.selected, 'restore');
       if (snapshot.view) landmarkView(snapshot.view);
@@ -1173,6 +1226,7 @@ export function createScene(
   }
   function updateWalk(time: number) {
     if (viewMode !== 'walk') return false;
+    if (procedural?.roboDogState.firstPerson && procedural.roboDog.children.length) return false;
     const dt = Math.min(0.08, Math.max(0, (time - lastFrame) / 1000));
     if (dt === 0) return false;
     const forward = Math.max(-1, Math.min(1,
@@ -1508,6 +1562,7 @@ export function createScene(
       } else buffer = await fetchModel(modelUrl(a), a.bytes, signal, progress);
       signal.throwIfAborted();
       const modelFolder = a.url.slice(0, a.url.lastIndexOf('/') + 1);
+      if (!draco) { draco = createDecoder(); loader.setDRACOLoader(draco); }
       const gltf = await loader.parseAsync(buffer, asset(modelFolder));
       if (disposed || signal.aborted) {
         disposeObject(gltf.scene);
@@ -1892,10 +1947,30 @@ export function createScene(
       manifest = await (boot?.manifest ??
         fetchJson<Manifest>(asset('data/models.json'), lifecycle.signal));
       if (disposed) return;
-      // 中石大模型加载入口：public/data/models.json 指向 public/models/cupb/campus.glb。
-      const gltf = await loadGLB(manifest.base, 'base', lifecycle.signal, boot);
-      baseRoot = gltf.scene;
+      // 建筑沿米制坐标生成，路面恢复为原校园 GLB 中的道路几何。
+      const infrastructure = await fetchJson<{ paths: { name: string; path: number[][] }[] }>(
+        asset('data/infrastructure-map.json'), lifecycle.signal,
+      );
+      const pedestrianRoutes = await fetchJson<PedestrianRouteData>(
+        asset('data/pedestrian-routes.json'), lifecycle.signal,
+      );
+      procedural = createProceduralCampus(buildings, landmarks, infrastructure.paths, pedestrianRoutes);
+      procedural.setPedestrianCount(pedestrianSettings.count);
+      procedural.setPedestrianSpeed(pedestrianSettings.speed);
+      procedural.setPedestrianRoutesVisible(pedestrianSettings.routesVisible);
+      await procedural.loadOriginalRoads(asset('models/cupb/original-roads.glb'));
+      // 广西大学树木模板使用 Draco 压缩，复用当前场景的解码器。
+      if (!draco) { draco = createDecoder(); loader.setDRACOLoader(draco); }
+      await procedural.loadMappedGreens(
+        asset('models/cupb/original-greens.glb'),
+        asset('models/trees.glb'),
+        asset('data/cupb-green-trees.json'),
+        loader,
+      );
+      baseRoot = procedural.root;
+      fallbackActive = true; // 当前生成地面为 y=0，第一人称沿用平地碰撞。
       scene.add(baseRoot);
+      procedural.setWeather(weather, preset);
       updateLabelAnchors();
       const terrainMesh: THREE.Mesh[] = [];
       baseRoot.traverse((o) => {
@@ -1930,6 +2005,7 @@ export function createScene(
         if (disposed) return;
         const refine = async () => {
           if (disposed || !baseRoot) return;
+          if (procedural) return;
           palette.buildings(baseRoot, 'base');
           const meshes: THREE.Mesh[] = [];
           baseRoot.traverse((o) => {
@@ -1959,8 +2035,9 @@ export function createScene(
         void loadTrees().catch(() => {
           if (!disposed) callbacks.onStatus('树木加载失败，可重试', true);
         });
-    } catch {
+    } catch (error) {
       if (!disposed) {
+        console.error('校园场景初始化失败', error);
         // 仅在 GLB/清单读取失败时启用占位几何，仍可使用原 UI 检查点位。
         fallbackActive = true;
         baseRoot = createFallbackCampus();
@@ -2018,17 +2095,26 @@ export function createScene(
   }
   function setPreset(p: Preset) {
     preset = p;
-    scene.fog = sky.setPreset(p);
+    procedural?.setWeather(weather, p);
+    scene.fog = weather === 'clear'
+      ? sky.setPreset(p)
+      : sky.setWeather(weather, p);
     const light = LIGHTING[p];
+    const factors = {
+      clear: { sun: 1, ambient: 1, fill: 1, environment: 1, exposure: 1 },
+      cloudy: { sun: .6, ambient: .85, fill: .8, environment: .85, exposure: .94 },
+      rain: { sun: .54, ambient: .77, fill: .8, environment: .85, exposure: .9 },
+      haze: { sun: .66, ambient: .72, fill: .8, environment: .85, exposure: .86 },
+    }[weather];
     sun.color.set(light.sun);
-    sun.intensity = light.power;
+    sun.intensity = light.power * factors.sun;
     ambient.color.set(light.skyLight);
     ambient.groundColor.set(light.bounce);
-    ambient.intensity = light.hemisphere;
+    ambient.intensity = light.hemisphere * factors.ambient;
     fill.color.set(light.fill);
-    fill.intensity = light.fillPower;
-    scene.environmentIntensity = light.environment;
-    renderer.toneMappingExposure = light.exposure;
+    fill.intensity = light.fillPower * factors.fill;
+    scene.environmentIntensity = light.environment * factors.environment;
+    renderer.toneMappingExposure = light.exposure * factors.exposure;
     // shadowFrustum owns the target-relative light position, including when
     // reapplying the same preset while its cached volume is unchanged.
     effects?.setNight(p === 'night');
@@ -2042,6 +2128,11 @@ export function createScene(
       reconcileDetails();
     }
     dirty = true;
+  }
+  function setWeather(next: Weather) {
+    weather = next;
+    setPreset(preset);
+    callbacks.onWeather?.(next);
   }
   function view(v: string) {
     if (viewMode === 'walk') {
@@ -2161,6 +2252,12 @@ export function createScene(
   function onWalkKeyUp(e: KeyboardEvent) {
     walkKeys.delete(e.code);
   }
+  function onWeatherKeyDown(e: KeyboardEvent) {
+    if (e.isComposing || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
+    if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
+    const next = ({ Digit1: 'clear', Digit2: 'cloudy', Digit3: 'rain', Digit4: 'haze' } as const)[e.code as 'Digit1' | 'Digit2' | 'Digit3' | 'Digit4'];
+    if (next) { e.preventDefault(); setWeather(next); }
+  }
   function onWalkSuspend() {
     walkKeys.clear();
     walkTouchForward = 0;
@@ -2172,6 +2269,7 @@ export function createScene(
     if (document.hidden) onWalkSuspend();
   }
   window.addEventListener('keydown', onWalkKeyDown);
+  window.addEventListener('keydown', onWeatherKeyDown);
   window.addEventListener('keyup', onWalkKeyUp);
   window.addEventListener('blur', onWalkSuspend);
   document.addEventListener('visibilitychange', onWalkVisibility);
@@ -2303,6 +2401,17 @@ export function createScene(
     if (!framePacer.shouldUpdate(time, modeSmooth)) return;
     const moving = viewMode === 'walk' ? false : controls.update();
     const walking = updateWalk(time);
+    if (procedural?.roboDogState.firstPerson && procedural.roboDog.children.length) {
+      camera.position.copy(procedural.roboDogState.position).add(new THREE.Vector3(0, .9, 0));
+      camera.quaternion.copy(procedural.roboDogState.quaternion);
+      controls.target.copy(camera.position).add(new THREE.Vector3(0, 0, -8).applyQuaternion(camera.quaternion));
+      cameraChanged = true;
+      dirty = true;
+    }
+    if (procedural) {
+      procedural.update(Math.min(.08, Math.max(0, (time - lastFrame) / 1000)), time, camera);
+      dirty = true;
+    }
     if (orbiting && !tween) {
       if (reduced.matches) setOrbit(false);
       else {
@@ -2427,6 +2536,30 @@ export function createScene(
         el.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
         el.classList.toggle('active', selected === l.id);
       }
+      for (const { b, el, point, width, height, bounds } of buildingLabelNodes) {
+        const p = labelProjection.copy(point).project(camera);
+        const dist = camera.position.distanceTo(point);
+        const x = ((p.x + 1) * labelViewport.width) / 2;
+        const y = ((-p.y + 1) * labelViewport.height) / 2;
+        bounds[0] = x - width / 2;
+        bounds[1] = y - height;
+        bounds[2] = x + width / 2;
+        bounds[3] = y;
+        const overlap = occupied.some(
+          (r) => bounds[0] < r[2] + 6 && bounds[2] > r[0] - 6 &&
+            bounds[1] < r[3] + 6 && bounds[3] > r[1] - 6,
+        );
+        const obscured = bounds[0] < frame.left || bounds[2] > frame.left + frame.width ||
+          bounds[1] < frame.top || bounds[3] > frame.top + frame.height;
+        const hidden = !layers.buildings || p.z < 0 || p.z > 1 ||
+          Math.abs(p.x) > 1 || Math.abs(p.y) > 1 ||
+          (selected && dist > 650) || (viewMode === 'walk' && dist > 250) ||
+          overlap || obscured;
+        el.style.display = hidden ? 'none' : '';
+        if (!hidden) occupied.push(bounds);
+        el.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
+        el.classList.toggle('active', selected === b.id);
+      }
     }
 
     if (cameraChanged && time - cameraSampleAt > 200) {
@@ -2492,6 +2625,79 @@ export function createScene(
       updateLoadStatus();
     },
     setPreset,
+    setWeather,
+    setGateOpen: (name, open) => {
+      const changed = procedural?.setGateOpen(name, open) ?? false;
+      if (changed) dirty = true;
+      return changed;
+    },
+    setPedestrianCount: (count) => {
+      pedestrianSettings.count = count;
+      procedural?.setPedestrianCount(count);
+      dirty = true;
+    },
+    setPedestrianSpeed: (speed) => {
+      pedestrianSettings.speed = speed;
+      procedural?.setPedestrianSpeed(speed);
+      dirty = true;
+    },
+    setPedestrianRoutesVisible: (visible) => {
+      pedestrianSettings.routesVisible = visible;
+      procedural?.setPedestrianRoutesVisible(visible);
+      dirty = true;
+    },
+    loadRoboDog: async (modelUrl: string) => {
+      if (!procedural) throw new Error('校园尚未加载完成');
+      await procedural.loadRoboDog(modelUrl, loader);
+      dirty = true;
+    },
+    focusRoboDog: () => {
+      if (!procedural?.roboDog.children.length) return false;
+      stopWalk();
+      restoredPose = null;
+      setOrbit(false);
+      selected = null;
+      autoFramed = false;
+      callbacks.onSelect(null);
+      clearGroup(highlight);
+      composeViewport();
+      const target = procedural.roboDog.position.clone().add(new THREE.Vector3(0, .5, 0));
+      moveTo(target, target.clone().add(new THREE.Vector3(3.8, 2.6, 4.5)));
+      return true;
+    },
+    setRoboDogFirstPerson: (on: boolean) => {
+      if (!procedural) return;
+      procedural.roboDogState.firstPerson = on;
+      if (on) setViewMode('walk');
+      dirty = true;
+    },
+    setRoboDogSpeed: (speed: number) => {
+      if (procedural) procedural.roboDogState.speed = Math.max(0, Math.min(20, speed));
+    },
+    setRoboDogPose: (position, quaternion) => {
+      if (!procedural) return;
+      procedural.roboDogState.position.set(...position);
+      procedural.roboDog.position.copy(procedural.roboDogState.position);
+      if (quaternion) {
+        procedural.roboDogState.quaternion.set(...quaternion);
+        procedural.roboDog.quaternion.copy(procedural.roboDogState.quaternion);
+      }
+      dirty = true;
+    },
+    moveRoboDog: (dt: number, direction: [number, number, number]) => {
+      procedural?.moveRoboDog(dt, new THREE.Vector3(...direction));
+      dirty = true;
+    },
+    getRoboDogState: () => {
+      const state = procedural?.roboDogState;
+      return {
+        position: (state?.position.toArray() ?? [0, 0, 0]) as [number, number, number],
+        quaternion: (state?.quaternion.toArray() ?? [0, 0, 0, 1]) as [number, number, number, number],
+        speed: state?.speed ?? 0,
+        state: state?.state ?? 'idle',
+        firstPerson: state?.firstPerson ?? false,
+      };
+    },
     setQuality,
     setViewMode,
     setWalkInput,
@@ -2547,7 +2753,7 @@ export function createScene(
       // A rejected decoderPending is permanent for that loader instance.
       // All subsequent parses must share a fresh decoder after a failed preload.
       if (decoderFailed) {
-        draco.dispose();
+        draco?.dispose();
         decoderFailed = false;
         draco = createDecoder();
         loader.setDRACOLoader(draco);
@@ -2586,7 +2792,7 @@ export function createScene(
       observer.disconnect();
       wheelHost.removeEventListener('wheel', onOverlayWheel);
       controls.dispose();
-      draco.dispose();
+      draco?.dispose();
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
@@ -2596,6 +2802,7 @@ export function createScene(
       cancelAnimationFrame(hoverFrame);
       canvas.removeEventListener('keydown', onKey);
       window.removeEventListener('keydown', onWalkKeyDown);
+      window.removeEventListener('keydown', onWeatherKeyDown);
       window.removeEventListener('keyup', onWalkKeyUp);
       window.removeEventListener('blur', onWalkSuspend);
       document.removeEventListener('visibilitychange', onWalkVisibility);

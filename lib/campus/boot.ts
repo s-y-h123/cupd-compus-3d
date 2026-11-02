@@ -1,4 +1,4 @@
-import { fetchJson, fetchModel, type StreamAsset } from './streaming.ts';
+import { fetchJson, type StreamAsset } from './streaming.ts';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const DATA_VERSION = process.env.NEXT_PUBLIC_DATA_VERSION;
@@ -30,29 +30,18 @@ export interface BasePrefetch {
 }
 
 /**
- * Start the manifest and base model before the scene code and building data
- * arrive. Both use the scene's normal retry policy and URLs. The caller owns
- * cancellation; an unconsumed failure stays silent until the scene awaits it.
+ * 几何校园只预取清单；机器狗模型由显式 loadRoboDog 调用加载。
  */
 export function prefetchBase(signal: AbortSignal): BasePrefetch {
-  const listeners = new Set<(fraction: number) => void>();
-  let latest: number | null = null;
   const manifest = fetchJson<ModelManifest>(asset('data/models.json'), signal);
-  const base = manifest.then((m) =>
-    fetchModel(modelUrl(m.base), m.base.bytes, signal, (fraction) => {
-      latest = fraction;
-      for (const listener of listeners) listener(fraction);
-    }),
-  );
+  const base = Promise.resolve(new ArrayBuffer(0));
   manifest.catch(() => {});
   base.catch(() => {});
   return {
     manifest,
     base,
-    onProgress(listener) {
-      listeners.add(listener);
-      if (latest !== null) listener(latest);
-      return () => listeners.delete(listener);
+    onProgress() {
+      return () => {};
     },
   };
 }

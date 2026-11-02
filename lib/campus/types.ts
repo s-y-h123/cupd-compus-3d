@@ -12,6 +12,7 @@ export type SelectionOrigin = 'manual' | 'tour' | 'restore';
 export type Quality = 'auto' | 'fine' | 'smooth';
 export type Preset = 'morning' | 'day' | 'evening' | 'night';
 export type ViewMode = 'overview' | 'walk';
+export type Weather = 'clear' | 'cloudy' | 'rain' | 'haze';
 export type LandmarkView =
   | 'oblique'
   | 'front'
@@ -131,6 +132,20 @@ export interface SceneController {
   setViewport: (frame: ViewportFrame, reframe?: boolean) => void;
   setLayer: (key: LayerKey, on: boolean) => void;
   setPreset: (p: Preset) => void;
+  setWeather: (weather: Weather) => void;
+  /** 已定位北门、东门、南门的双扇门开关。 */
+  setGateOpen: (name: '北门' | '东门' | '南门', open: boolean) => boolean;
+  setPedestrianCount: (count: number) => void;
+  setPedestrianSpeed: (speed: number) => void;
+  setPedestrianRoutesVisible: (visible: boolean) => void;
+  /** 真实机器狗 GLB/GLTF 仅在显式调用时加载；初始容器为空。 */
+  loadRoboDog: (modelUrl: string) => Promise<void>;
+  focusRoboDog: () => boolean;
+  setRoboDogFirstPerson: (on: boolean) => void;
+  setRoboDogSpeed: (speed: number) => void;
+  setRoboDogPose: (position: [number, number, number], quaternion?: [number, number, number, number]) => void;
+  moveRoboDog: (dt: number, direction: [number, number, number]) => void;
+  getRoboDogState: () => { position: [number, number, number]; quaternion: [number, number, number, number]; speed: number; state: 'idle' | 'walking' | 'turning'; firstPerson: boolean };
   setQuality: (q: Quality) => void;
   setViewMode: (mode: ViewMode) => void;
   /** Touch/onscreen movement: forward +1 is ahead, side +1 is right. */

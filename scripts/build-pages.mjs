@@ -77,6 +77,7 @@ for (const a of [
 for (const a of [
   'data/buildings.json',
   'data/sources.json',
+  'models/cupb/robot-dog.glb',
   'draco/draco_decoder.wasm',
   'draco/draco_wasm_wrapper.js',
   'draco/draco_decoder.js',

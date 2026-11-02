@@ -27,11 +27,11 @@ const ast = ts.createSourceFile(
 const sceneFunction = ast.statements.find(
   (node) => ts.isFunctionDeclaration(node) && node.name?.text === 'createScene',
 );
-const names = ['styleMeshes', 'applyModelLighting', 'loadGLB', 'setPreset'];
+const names = ['styleMeshes', 'applyModelLighting', 'loadGLB', 'setPreset', 'setWeather'];
 const functions = sceneFunction.body.statements.filter(
   (node) => ts.isFunctionDeclaration(node) && names.includes(node.name?.text),
 );
-for (const name of ['styleMeshes', 'loadGLB', 'setPreset'])
+for (const name of ['styleMeshes', 'loadGLB', 'setPreset', 'setWeather'])
   assert.ok(functions.some((node) => node.name.text === name));
 const compiled = ts.transpileModule(
   functions.map((node) => node.getText(ast)).join('\n'),
@@ -50,22 +50,25 @@ const makeLoader = compileFunction(
   const scene = new THREE.Scene(), palette = createPalette([]), nightStyle = createNightStyle();
   const contextStyle = { apply() {} }, lifecycle = new AbortController();
   const progresses = new Map(), landmarks = [], loaded = new Map(), geometryCosts = new Map();
-  const sky = { setPreset() {} }, sun = { color: new THREE.Color() };
+  const sky = { setPreset() {}, setWeather() {} }, sun = { color: new THREE.Color() };
   const ambient = { color: new THREE.Color(), groundColor: new THREE.Color() };
   const fill = { color: new THREE.Color() }, renderer = {}, effects = { setNight() {} };
   const labels = { dataset: {} }, syncRoadLights = () => {}, reconcileDetails = () => {};
+  const callbacks = {};
+  const CUPB_CONFIG = { model: { url: 'not-fixture.glb' } };
   const updateLoadStatus = () => {}, asset = x => x, modelUrl = x => x.url;
   const fetchModel = async () => new ArrayBuffer(0), loader = { parseAsync: async () => ({ scene: root }) };
-  let preset = initialPreset, disposed = false, loadedBytes = 0, dirty = false, yields = 0;
+  let preset = initialPreset, weather = 'clear', procedural = null, draco = {};
+  let disposed = false, loadedBytes = 0, dirty = false, yields = 0;
   const setTimeout = resume => globalThis.setTimeout(() => {
-    onYield(++yields, { setPreset, abort: () => lifecycle.abort() });
+    onYield(++yields, { setPreset, setWeather, abort: () => lifecycle.abort() });
     resume();
   }, 0);
   ${compiled}
   return async key => {
     const gltf = await loadGLB({ url: 'fixture.glb', bytes: 1 }, key);
     scene.add(gltf.scene);
-    return { preset, yields };
+    return { preset, weather, sunIntensity: sun.intensity, yields };
   };
 `,
   ['services', 'fixture'],
@@ -133,6 +136,29 @@ for (const key of ['base', 'landmark-test'])
           disposeObject(root);
         }
       });
+
+for (const weather of ['clear', 'cloudy', 'rain', 'haze'])
+  for (const time of ['morning', 'day', 'evening', 'night'])
+    test(`${weather} keeps its weather when switching to ${time}`, async () => {
+      const { root, materials } = model();
+      try {
+        const run = makeLoader(services, {
+          root,
+          initialPreset: 'day',
+          onYield(index, controls) {
+            if (index === 1) controls.setWeather(weather);
+            if (index === 2) controls.setPreset(time);
+          },
+        });
+        const result = await run('base');
+        assert.equal(result.weather, weather);
+        assert.equal(result.preset, time);
+        assert.equal(materials.glass.emissiveIntensity, time === 'night' ? 1.5 : 0);
+        assert.ok(result.sunIntensity > 0);
+      } finally {
+        disposeObject(root);
+      }
+    });
 
 test('cancellation during the last slice still disposes the unpublished model', async () => {
   const { root } = model();

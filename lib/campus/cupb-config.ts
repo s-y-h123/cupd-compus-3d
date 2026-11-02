@@ -7,6 +7,7 @@ import type { Landmark } from './types';
  */
 export const CUPB_CONFIG: {
   model: { url: string; origin: [number, number]; units: 'meters' };
+  roboDog: { url: string; start: [number, number, number] };
   overview: { target: [number, number, number]; position: [number, number, number] };
   walk: {
     start: [number, number];
@@ -18,6 +19,8 @@ export const CUPB_CONFIG: {
     mouseSensitivity: number;
   };
   tourOrder: string[];
+  /** 北门与图书馆东侧已核名的建筑；保持 22 个游览点不变。 */
+  northBuildingLabelIds: string[];
   landmarks: Landmark[];
 } = {
   // 模型加载入口：替换模型时保持与 public/data/models.json 的 base.url 一致。
@@ -26,6 +29,8 @@ export const CUPB_CONFIG: {
     origin: [116.24050845, 40.21605355],
     units: 'meters',
   },
+  // 机器狗模型按需加载；起点在北门通往图书馆的步道上，坐标为 Three.js [东, 高, 南]。
+  roboDog: { url: 'models/cupb/robot-dog.glb', start: [90, 0, -379] },
   overview: {
     target: [0, 15, 0],
     position: [720, 870, 940],
@@ -42,6 +47,11 @@ export const CUPB_CONFIG: {
   },
   // 巡游节点只引用下方点位 ID；页面沿用原仓库每站 8.5 秒的节奏。
   tourOrder: ["library","main-building-a","gymnasium","swimming-pool","third-teaching","fourth-teaching","fifth-teaching","geology-building","energy-lab","nano-lab","acoustic-lab","first-canteen","second-canteen","student-center","oil-building-a","youth-residence","runjie-residence","runjie-residence-five","huicai-residence-seven","main-field","north-gate","south-gate"],
+  // 名称与位置来自现有 GeoJSON 建筑足迹，未命名楼宇不在此猜测命名。
+  northBuildingLabelIds: [
+    'cupb/941', 'cupb/920', 'cupb/960', 'cupb/1012',
+    'cupb/924', 'cupb/1053', 'cupb/969', 'cupb/986', 'cupb/916',
+  ],
   // 点位来自同坐标系 GeoJSON 足迹；独立机位可在各项 cameraOffset/distance 修改。
   landmarks: [
   {

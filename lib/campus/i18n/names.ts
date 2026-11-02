@@ -2,6 +2,15 @@
 // 名称不是坐标证据，点位以同源 GeoJSON 为准。
 export const campusNames: Record<string, readonly [string, string]> = {
   主楼A座: ['主楼A座', 'Main Building A'],
+  化工楼A座: ['化工楼A座', 'Chemical Engineering Building A'],
+  化工楼B座: ['化工楼B座', 'Chemical Engineering Building B'],
+  化工楼C座: ['化工楼C座', 'Chemical Engineering Building C'],
+  化工楼D座: ['化工楼D座', 'Chemical Engineering Building D'],
+  安全科技楼: ['安全科技楼', 'Safety Science Building'],
+  协同创新中心: ['协同创新中心', 'Collaborative Innovation Center'],
+  提高采收率研究院: ['提高采收率研究院', 'Enhanced Oil Recovery Institute'],
+  教工活动中心: ['教工活动中心', 'Faculty Activity Center'],
+  东配电房: ['东配电房', 'East Power Distribution Room'],
   地质楼: ['地质楼', 'Geology Building'],
   能源材料微结构实验室: ['能源材料微结构实验室', 'Energy Materials Microstructure Laboratory'],
   联合纳米岩石物理实验室: ['联合纳米岩石物理实验室', 'Joint Nano Rock Physics Laboratory'],

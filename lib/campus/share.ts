@@ -1,8 +1,9 @@
-import type { LandmarkView, Preset } from './types';
+import type { LandmarkView, Preset, Weather } from './types';
 export interface CameraSnapshot {
   selected: string | null;
   view: LandmarkView | null;
   preset: Preset;
+  weather?: Weather;
   position: [number, number, number];
   target: [number, number, number];
   /** Half-span in meters at the target, used to adapt a shared view to another screen. */
@@ -10,11 +11,13 @@ export interface CameraSnapshot {
 }
 const views = ['oblique', 'front', 'back', 'top', 'entrance', 'rear-entrance'];
 const presets = ['morning', 'day', 'evening', 'night'];
+const weathers = ['clear', 'cloudy', 'rain', 'haze'];
 export function encodeShare(snapshot: CameraSnapshot) {
   const params = new URLSearchParams();
   if (snapshot.selected) params.set('place', snapshot.selected);
   if (snapshot.view) params.set('view', snapshot.view);
   params.set('light', snapshot.preset);
+  if (snapshot.weather) params.set('weather', snapshot.weather);
   params.set(
     'camera',
     [...snapshot.position, ...snapshot.target]
@@ -31,10 +34,12 @@ export function decodeShare(
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   const selected = params.get('place');
   const light = params.get('light'),
+    weather = params.get('weather'),
     view = params.get('view');
   const result: Partial<CameraSnapshot> = {};
   if (selected && ids.includes(selected)) result.selected = selected;
   if (presets.includes(light ?? '')) result.preset = light as Preset;
+  if (weathers.includes(weather ?? '')) result.weather = weather as Weather;
   if (views.includes(view ?? '')) result.view = view as LandmarkView;
   const numbers = params.get('camera')?.split(',').map(Number);
   const span = Number(params.get('span'));
@@ -53,7 +58,7 @@ export function decodeShare(
     result.target = numbers.slice(3) as CameraSnapshot['target'];
     result.span = span;
   }
-  return result.selected || result.position || result.preset ? result : null;
+  return result.selected || result.position || result.preset || result.weather ? result : null;
 }
 export function cameraBearing(snapshot: CameraSnapshot | null) {
   if (!snapshot) return 0;

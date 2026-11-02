@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-static';
 import {
   useCallback,
   useEffect,
@@ -22,6 +23,9 @@ import Image from 'next/image';
 import {
   Building2,
   Check,
+  CloudFog,
+  Cloud,
+  CloudRain,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -38,6 +42,8 @@ import {
   RectangleEllipsis,
   ScanEye,
   Ellipsis,
+  Eye,
+  EyeOff,
   CircleHelp,
   Layers3,
   MapPin,
@@ -73,6 +79,7 @@ import type {
   LandmarkView,
   Category,
   ViewMode,
+  Weather,
 } from '@/lib/campus/types';
 import { DEFAULT_LAYERS, CATEGORY_NAMES } from '@/lib/campus/types';
 import { nextTourIndex } from '@/lib/campus/math';
@@ -89,6 +96,7 @@ import { CUPB_CONFIG } from '@/lib/campus/cupb-config';
 import { createCameraStore, type CameraStore } from '@/lib/campus/camera-store';
 import { CampusMinimap } from '@/components/campus-minimap';
 import { CampusViewControls } from '@/components/campus-view-controls';
+import { CampusModelPreview } from '@/components/campus-model-preview';
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const TOUR_STOP_MS = 8500;
 const LAYER_ITEMS: [LayerKey, string, typeof Building2][] = [
@@ -106,6 +114,12 @@ const PRESETS: [Preset, string, typeof Sun][] = [
   ['day', '白天', Sun],
   ['evening', '黄昏', Sunset],
   ['night', '夜晚', Moon],
+];
+const WEATHER_OPTIONS: [Weather, string, typeof Sun, string][] = [
+  ['clear', '晴日', Sun, '1'],
+  ['cloudy', '阴天', Cloud, '2'],
+  ['rain', '雨天', CloudRain, '3'],
+  ['haze', '雾霾', CloudFog, '4'],
 ];
 const BUILDING_RESULT_LIMIT = 40;
 const QUALITY_OPTIONS: [Quality, string][] = [
@@ -148,6 +162,7 @@ function CampusMap() {
     [tab, setTab] = useState('explore');
   const [layers, setLayers] = useState(DEFAULT_LAYERS),
     [preset, setPreset] = useState<Preset>('day'),
+    [weather, setWeather] = useState<Weather>('clear'),
     [quality, setQuality] = useState<Quality>('auto'),
     [viewMode, setViewMode] = useState<ViewMode>('overview'),
     [tour, setTour] = useState(false),
@@ -162,9 +177,11 @@ function CampusMap() {
   const settings = useRef({
     layers: DEFAULT_LAYERS,
     preset: 'day' as Preset,
+    weather: 'clear' as Weather,
     quality: 'auto' as Quality,
   });
   const presetEdited = useRef(false);
+  const weatherEdited = useRef(false);
   useEffect(() => {
     // 三维夜景只改变校园场景；中石大白色控制台始终使用同一套界面颜色。
     document.documentElement.dataset.theme = preset === 'night' ? 'night' : 'day';
@@ -192,6 +209,16 @@ function CampusMap() {
     'oblique',
   );
   const [orbit, setOrbit] = useState(false);
+  const [pedestrianCount, setPedestrianCount] = useState(96);
+  const [pedestrianSpeed, setPedestrianSpeed] = useState(1);
+  const [pedestrianRoutesVisible, setPedestrianRoutesVisible] = useState(false);
+  const [dogStatus, setDogStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  useEffect(() => {
+    if (!ready) return;
+    controller.current?.setPedestrianCount(pedestrianCount);
+    controller.current?.setPedestrianSpeed(pedestrianSpeed);
+    controller.current?.setPedestrianRoutesVisible(pedestrianRoutesVisible);
+  }, [ready, pedestrianCount, pedestrianSpeed, pedestrianRoutesVisible]);
   const [reducedMotion, setReducedMotion] = useState(false);
   // A fresh object restarts the timer when the same message repeats.
   const notify = useCallback(
@@ -266,7 +293,18 @@ function CampusMap() {
                 }
               },
               onReady: () => {
-                if (active) setReady(true);
+                if (!active) return;
+                setReady(true);
+                setDogStatus('loading');
+                void c.loadRoboDog(asset(CUPB_CONFIG.roboDog.url))
+                  .then(() => {
+                    if (!active) return;
+                    c.setRoboDogPose(CUPB_CONFIG.roboDog.start);
+                    setDogStatus('ready');
+                  })
+                  .catch(() => {
+                    if (active) setDogStatus('error');
+                  });
               },
               onSelect: (id, origin = 'manual') => {
                 if (active) {
@@ -316,6 +354,12 @@ function CampusMap() {
                     setCollapsed(false);
                 }
               },
+              onWeather: (next) => {
+                if (active) {
+                  settings.current.weather = next;
+                  setWeather(next);
+                }
+              },
               // Metrics are only displayed in debug mode; elsewhere each
               // report would re-render the whole page every 1.5 s.
               onMetrics: debugMetrics
@@ -332,6 +376,7 @@ function CampusMap() {
           cleanup = () => c.dispose();
           c.setQuality(settings.current.quality);
           c.setPreset(settings.current.preset);
+          c.setWeather(settings.current.weather);
           for (const key of Object.keys(settings.current.layers) as LayerKey[])
             c.setLayer(key, settings.current.layers[key]);
           const shared = decodeShare(location.hash, [
@@ -340,10 +385,15 @@ function CampusMap() {
           ]);
           if (shared) {
             if (presetEdited.current) shared.preset = settings.current.preset;
+            if (weatherEdited.current) shared.weather = settings.current.weather;
             c.restoreSnapshot(shared);
             if (shared.preset) {
               settings.current.preset = shared.preset;
               setPreset(shared.preset);
+            }
+            if (shared.weather) {
+              settings.current.weather = shared.weather;
+              setWeather(shared.weather);
             }
             setLandmarkView(
               shared.view ?? (shared.position ? null : 'oblique'),
@@ -587,6 +637,12 @@ function CampusMap() {
     setPreset(p);
     controller.current?.setPreset(p);
   }
+  function changeWeather(next: Weather) {
+    weatherEdited.current = true;
+    settings.current.weather = next;
+    setWeather(next);
+    controller.current?.setWeather(next);
+  }
   function changeQuality(q: Quality) {
     settings.current.quality = q;
     setQuality(q);
@@ -715,6 +771,11 @@ function CampusMap() {
   return (
     <main className={`campus-app mode-${viewMode} ${keyboardOpen ? 'keyboard-open' : ''}`}>
       <div className="scene-host" ref={host} />
+      <CampusModelPreview locale={locale} count={pedestrianCount} speed={pedestrianSpeed}
+        dogStatus={dogStatus} dogModelUrl={asset(CUPB_CONFIG.roboDog.url)}
+        showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
+        onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
+        onFocusDog={() => controller.current?.focusRoboDog()} />
       <header className="masthead">
         <div className="masthead-brand">
           <button
@@ -787,24 +848,6 @@ function CampusMap() {
               </Menu.Positioner>
             </Menu.Portal>
           </Menu.Root>
-          <a
-            className="header-action"
-            href="https://github.com/s-y-h123/cupd-compus-3d"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={t('查看中石大项目 GitHub 仓库')}
-          >
-            <svg
-              width={18}
-              height={18}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M12 .297C5.37.297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.334-5.466-5.93 0-1.31.467-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.5 11.5 0 0 1 3-.404c1.02.005 2.045.138 3 .404 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
-            </svg>
-          </a>
         </div>
       </header>
       <aside
@@ -949,6 +992,16 @@ function CampusMap() {
                     </TabsTrigger>
                   </TabsList>
                   <button
+                    type="button"
+                    className="label-visibility-toggle"
+                    aria-label={t(layers.labels ? '隐藏建筑名称' : '显示建筑名称')}
+                    title={t(layers.labels ? '隐藏建筑名称' : '显示建筑名称')}
+                    aria-pressed={!layers.labels}
+                    onClick={() => toggleLayer('labels', !layers.labels)}
+                  >
+                    {layers.labels ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                  <button
                     className="dock-expand"
                     aria-expanded={panelExpanded}
                     aria-controls="campus-panel-body"
@@ -1079,7 +1132,19 @@ function CampusMap() {
                   ))}
                 </TabsContent>
                 <TabsContent value="environment" className="settings-content">
-                  <div className="preset-grid">
+                  <div className="weather-heading">{t('天气切换')} <small>{t('键盘 1–4')}</small></div>
+                  <fieldset className="weather-grid" aria-label={t('天气切换')}>
+                    {WEATHER_OPTIONS.map(([value, label, Icon, key]) => (
+                      <button key={value} type="button" aria-pressed={weather === value}
+                        className={weather === value ? 'active' : ''}
+                        onClick={() => changeWeather(value)}>
+                        <Icon size={18} aria-hidden="true" />
+                        <span>{t(label)}</span><kbd>{key}</kbd>
+                      </button>
+                    ))}
+                  </fieldset>
+                  <div className="weather-heading">{t('时间段')}</div>
+                  <fieldset className="preset-grid" aria-label={t('时间段')}>
                     {PRESETS.map(([p, label, Icon]) => (
                       <button
                         key={p}
@@ -1098,7 +1163,7 @@ function CampusMap() {
                         </span>
                       </button>
                     ))}
-                  </div>
+                  </fieldset>
                   <div className="setting-row">
                     <span id="quality-title">{t('画质')}</span>
                     <fieldset

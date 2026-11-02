@@ -27,11 +27,12 @@ test('别名与分类仍限于精选目录', () => {
   assert.equal(searchLandmarks(landmarks, '六教', 'living').length, 0);
   assert.equal(searchLandmarks(landmarks, '', 'landmark').length, 4);
 });
-test('分享保留地标、相机与光照，输入异常不会生成无效镜头', () => {
+test('分享保留地标、相机、天气与光照，输入异常不会生成无效镜头', () => {
   const snapshot = {
     selected: 'library',
     view: 'back',
     preset: 'evening',
+    weather: 'rain',
     position: [185, 85, 240],
     target: [204, 20, 480],
     span: 70,

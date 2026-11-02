@@ -1,16 +1,20 @@
-# 中石大模型接入与部署手册
+# 中石大几何场景与部署手册
 
-本项目沿用原仓库的 React、Three.js、Vinext 和 GitHub Pages 静态导出流程。开发时通过本地 HTTP 服务访问；浏览器直接双击 `index.html` 形成的 `file://` 页面无法可靠加载模块、JSON 和 GLB。
+本项目沿用原仓库的 React、Three.js、Vinext 和 GitHub Pages 静态导出流程。开发时通过本地 HTTP 服务访问；直接用 `file://` 打开构建文件无法可靠加载模块和 JSON。
 
-## 1. 放置模型与检查坐标
+## 1. 场景数据与坐标
 
-模型路径在 `lib/campus/cupb-config.ts` 的 `model.url` 中编辑。替换或改名后运行 `python scripts/prepare-cupb-data.py`；若文件名不是默认的 `campus.glb`，指定 `--model public/models/cupb/你的文件.gltf`。脚本会更新 `public/data/models.json` 的 URL、字节数、SHA-256 缓存键和模型覆盖范围。随后运行 `node scripts/test-cupb-integration.mjs`，确认清单路径与配置一致。脚本不会改写 `cupb-config.ts`；地标和巡游以该配置对象为运行时唯一来源，`public/data/landmarks.json` 只是同源 GeoJSON 生成的初始参考快照。新模型应保留原点、米制比例、X 东/Z 南轴向；若这些改变，须同时校正地标。
+运行时由 `lib/campus/procedural-campus.ts` 从 `public/data/buildings.json` 生成建筑、绿化和行人，道路只加载 `public/models/cupb/original-roads.glb`。该路面由 `scripts/extract_cupb_roads.py` 从原 `campus.glb` 提取；`public/data/pedestrian-routes.json` 是沿原路面、绕开建筑和中央喷泉预计算的南北校区行走路线，`infrastructure-map.json` 的路径仍用于机器狗导航与道路沿线树灯布置，不绘制路面。修改行人目标地点可编辑 `scripts/prepare-pedestrian-routes.py` 的 `PAIRS`，然后运行此脚本。修改已有建筑轮廓则更新同源 GeoJSON 后运行 `python scripts/prepare-cupb-data.py`。
 
-把昌平校区的整体模型放在 `public/models/cupb/campus.glb`。该目录中的文件在浏览器端以项目资源路径加载；不要把它放进 `app/`、`lib/` 或构建产物 `out/`。模型使用 `.gltf` 时，还须把其引用的 `.bin` 和纹理一起放在可访问的相对路径下，并在配置中改用对应文件名。
+机器狗模型位于 `public/models/cupb/robot-dog.glb`，约 13 MB。来源是用户提供的 FBX，转为 Three.js 可直接加载的 Draco 压缩 GLB；网格和材质保留，源文件没有骨骼动画。校园加载完成后自动载入机器狗，初始位置在 `lib/campus/cupb-config.ts` 的 `roboDog.start`；右上角机器狗面板可预览模型并一键飞到校园中的机器狗。`SceneController` 保留 `loadRoboDog(modelUrl)`、`focusRoboDog`、`setRoboDogPose`、`setRoboDogSpeed`、`moveRoboDog`、`setRoboDogFirstPerson` 和 `getRoboDogState` 接口，供后续巡检路线与动作接入。当前机器狗是静态姿态，不宣称四肢步行动画已完成。
 
-场景适配参数集中在 `lib/campus/cupb-config.ts`。根据模型导出的坐标系，核对单位、地面高度、北向、整体位置和缩放；随后在同一个配置对象中修改初始镜头、地标坐标与巡游顺序。此处的坐标须与实际 GLB 一致。旧 HTML 的 `0–100` 局部坐标和广西大学数据坐标不能直接复用。
+场景配置集中在 `lib/campus/cupb-config.ts`。坐标为米制 X 东、Z 南，地标、建筑和道路须同源。旧 HTML 的 `0–100` 局部坐标不能直接复用。
 
-推荐先在建模软件中核对三个可辨认的控制点（例如图书馆、主楼、操场），再填写配置。现有参考资料可用于判读相对位置，但不等于测绘坐标。模型需要呈现建筑、道路、植被和水体时，以你导出的模型资产为准，不要运行原仓库的广西大学离线建模脚本来重建中石大。
+建议以图书馆、主楼、操场至少三个控制点核对坐标。立面风格和人流是规则化示意，不等于逐栋实测。若更新原 `campus.glb`，运行 `python scripts/extract_cupb_roads.py` 重新提取路面，再执行静态构建。
+
+景观放在 `lib/campus/site-elements.ts`；篮球场、网球场及其围网、灯柱已从场景中移除。原 `(273,110)` 圆形喷泉和 `(81.5,-0.5)` 青年园小水池已删除。现有唯一喷泉位于图书馆南侧中央空地，中心约 `(76,116)`（X 东、北向坐标），水池外框约宽 36 米、南北长 84 米，按用户俯视标注图换算；其造型参考旧 HTML 的长方形浅水池及三处纵向喷水点，尺寸仍需实测核验。
+
+原先附加的 V1–V3、H1–H4 网格道路、球场环道和楼前连接步道已移除，道路以原校园 GLB 路面为准。覆盖范围围墙沿现有模型矩形外框生成，矩形**不是实测校界**。已知北门、东门、南门的门体放在当前数据点位；东门继续使用 `(321.597,114.713)`，与用户提供的地图截图方位一致。外框上的对应开口是投影示意，不能视作真实门墙连接。南校区北门尚无可核对米制坐标；用户要求本轮不放西南门，因此这两处均未新增门体和标签。
 
 ## 2. 修改地标与巡游
 
@@ -22,7 +26,7 @@
 
 原版巡游不是自由曲线或独立飞行路径：它按地标顺序逐站聚焦。保留原版节奏时，站间相机动画约为 1.3 秒，每站停留约 8.5 秒。配置中的巡游节点应为模型坐标系下已核实的地标；若尚未提供某栋建筑的位置，先不要把它作为已确认点位发布。
 
-原版 UI 有八个图层开关。当前 `campus.glb` 虽是合并网格，但适配代码按原模型脚本的固定顶点色重排三角形索引，因而能分别隐藏建筑、道路、植被、水体、运动面；地面始终显示。此处理只复用原模型几何，不重新生成建筑。后续模型若没有该类别顶点色，可按建筑/道路/植被/水体/运动场为节点命名，加载器会按节点名称控制图层。完全合并且不带类别色或语义节点的模型无法单独开关图层。边界为模型覆盖矩形，不是实测校界；周边建筑没有独立语义层。
+左侧八项图层继续使用；新生成场景将建筑、道路、植被、运动面、行人分别放入独立 Group。雨天湿路面随道路图层隐藏。边界是模型资料覆盖矩形，不是实测校界。环境页的天气和时间段独立切换；键盘 1 晴日、2 阴天、3 雨天、4 雾霾，四种天气均可搭配清晨、白天、黄昏、夜晚。
 
 ## 3. 本地启动
 
@@ -30,14 +34,14 @@
 
 使用 Node.js 24，在项目根目录运行：
 
-Windows 也可双击项目根目录的 `open-campus.cmd`。启动文件自动构建并打开浏览器，页面效果与 `npm run preview` 一致；服务窗口需要保持打开。这是单击打开的本地入口，直接用 `file://` 打开 HTML 仍不支持模型资源加载。
+Windows 也可双击项目根目录的 `open-campus.cmd`。启动文件自动构建、在后台启动本地预览服务并打开浏览器，页面效果与 `npm run preview` 一致。启动文件须留在项目根目录；要从桌面打开，请创建指向它的快捷方式。重启电脑后再次双击即可；不要单独依赖旧的 `127.0.0.1` 收藏地址。直接用 `file://` 打开 HTML 仍不支持数据加载。
 
 ```sh
 npm ci
 npm run dev
 ```
 
-打开终端显示的本地地址。修改 `public/` 下的 GLB 或配置后，刷新页面并查看浏览器开发者工具的 Network 与 Console。运行静态构建检查：
+打开终端显示的本地地址。修改场景配置或 GeoJSON 后刷新页面，并查看浏览器开发者工具的 Network 与 Console。运行静态构建检查：
 
 ```sh
 npm run typecheck
@@ -45,25 +49,24 @@ npm run build:pages
 npm run preview
 ```
 
-静态文件生成在 `out/`；本项目仓库为 [`s-y-h123/cupd-compus-3d`](https://github.com/s-y-h123/cupd-compus-3d)，本地静态预览地址为 `http://127.0.0.1:4300/cupd-compus-3d/`。`npm run preview` 通过 HTTP 提供静态文件，直接打开 `out/index.html` 不会得到相同效果。
+静态文件生成在 `out/`；本项目仓库为 [`s-y-h123/cupd-compus-3d`](https://github.com/s-y-h123/cupd-compus-3d)。双击启动文件优先使用 `http://127.0.0.1:4301/cupd-compus-3d/`，若端口已被其他程序占用会自动选择 4302–4305 并打开正确地址；手工 `npm run preview` 默认使用 4300。两种方式都通过 HTTP 提供静态文件，直接打开 `out/index.html` 不会得到相同效果。给别人查看时发送完成部署的 HTTPS 地址，`127.0.0.1` 只指向收件人自己的电脑。
 
 ## 4. 发布到 GitHub Pages
 
 `.github/workflows/pages.yml` 在推送 `main` 后执行检查、运行 `npm run build:pages`，上传 `out/` 并发布 Pages。当前仓库的 `AGENTS.md` 规定常规开发在 `dev` 分支进行，发布到 `main` 需要明确授权。首次发布时，在 [项目仓库](https://github.com/s-y-h123/cupd-compus-3d) 的 Settings → Pages 中启用 **GitHub Actions** 作为来源。预期在线地址为 [`https://s-y-h123.github.io/cupd-compus-3d/`](https://s-y-h123.github.io/cupd-compus-3d/)；以部署完成后 GitHub 显示的地址为准。
 
-Pages 子路径由 `scripts/build-pages.mjs` 中的 `PAGES_BASE_PATH` 和仓库名确定。当前仓库使用 `/cupd-compus-3d` 前缀；若将项目改名，须重新构建并核对脚本、模型和数据请求的前缀。构建后确认 `out/models/cupb/campus.glb` 存在；发布完成再从实际 Pages 地址访问一次，并在 Network 面板确认模型请求成功。
+Pages 子路径由 `scripts/build-pages.mjs` 中的 `PAGES_BASE_PATH` 和仓库名确定。当前仓库使用 `/cupd-compus-3d` 前缀；若将项目改名，须重新构建并核对脚本与数据请求的前缀。构建后确认 `out/data/buildings.json` 和 `out/data/infrastructure-map.json` 存在；发布完成再从实际 Pages 地址访问一次。旧校园 GLB 仍可能随历史资产打包，但页面不请求它。
 
 ## 5. 常见问题
 
 | 现象 | 检查与处理 |
 | --- | --- |
-| 替换模型后仍显示旧版或进度不准 | 重新运行数据准备脚本，刷新 `models.json` 的字节数和 SHA-256，再构建并检查浏览器/CDN 缓存。 |
-| 模型请求 404 | 检查 `public/models/cupb/campus.glb` 的文件名大小写、配置路径、构建产物中的同名文件，以及 Pages 仓库子路径。用浏览器 Network 面板看实际请求 URL。 |
+| 修改建筑后仍显示旧版 | 重新运行数据准备脚本和静态构建，并清理浏览器/CDN 缓存；确认 `out/data/buildings.json` 已更新。 |
+| 场景数据请求 404 | 检查 `public/data/buildings.json`、`public/data/infrastructure-map.json`、Pages 子路径和构建产物同名文件。 |
 | `file://` 打开后空白或报跨域 | 使用 `npm run dev` 或 `npm run preview` 提供 HTTP 服务；不要直接双击构建文件。 |
-| 外部纹理、`.bin` 或 Draco 解码失败 | `.gltf` 的外部文件须与其相对路径一起发布；压缩 GLB 要能从页面资源前缀访问到原仓库的 Draco 解码器。查看 Console 中的具体资源 URL。 |
-| GLB 加载失败 | 页面应显示错误并启用当前适配实现中的简易占位几何体。先核对文件是否完整、浏览器是否支持 WebGL 2、GLB 是否能被 Three.js 解析；占位几何只用于保持页面可操作，不代表校园实景。 |
-| 标签或镜头明显错位 | 重新核对模型单位、北向、原点及 `cupb-config.ts` 的同一坐标系。不要仅调整单个地标来掩盖全局缩放或轴向错误。 |
-| 某个图层开关不能单独隐藏 | 核对新 GLB 的顶点色是否仍与 `scene.ts` 的类别色表相同；不同时导出按类别命名的独立节点。当前周边建筑图层没有可分离资产。 |
-| 帧率低或加载慢 | 先检查 GLB 体积、三角面数量、纹理尺寸和 Draw Calls；使用原版自动画质，必要时在源模型端生成 LOD 或拆分远景。精细模式的阴影与后处理开销更高。 |
+| 机器狗 GLB/GLTF 加载失败 | 页面右上角会显示模型加载失败。检查 `models/cupb/robot-dog.glb` 及 `draco/` 解码资源是否可访问；校园场景仍可独立运行。 |
+| 标签或镜头明显错位 | 重新核对 GeoJSON 米制单位、北向、原点及 `cupb-config.ts` 的同一坐标系。不要仅调整单个地标来掩盖全局缩放或轴向错误。 |
+| 某个图层开关不能单独隐藏 | 核对 `procedural-campus.ts` 各 Group 的 `userData.layer` 与 `scene.ts` 图层映射。 |
+| 帧率低或加载慢 | 检查 Draw Calls、阴影档位、窗口实例数、行人数量和雨粒数量；先使用原版自动画质。 |
 
 部署前请按 `README.md` 中的原仓库许可与数据署名要求处理代码、模型和地理数据。你自行加入的照片和模型应另行确认使用权。

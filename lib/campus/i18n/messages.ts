@@ -1,5 +1,12 @@
 /** Chinese source messages are stable keys; placeholders preserve sentence structure. */
 export const englishMessages: Record<string, string> = {
+  天气切换: 'Weather',
+  '键盘 1–4': 'Keys 1–4',
+  晴日: 'Clear',
+  阴天: 'Cloudy',
+  雨天: 'Rain',
+  雾霾: 'Haze',
+  时间段: 'Time of day',
   '中国石油大学（北京）': 'China University of Petroleum Beijing',
   '昌平校区 · 数字沙盘': 'Changping Campus · Digital Map',
   探索昌平校区: 'Explore Changping Campus',
@@ -33,6 +40,8 @@ export const englishMessages: Record<string, string> = {
   视角: 'View',
   方位与近景: 'Directions and close-ups',
   地点名称: 'Place labels',
+  隐藏建筑名称: 'Hide building names',
+  显示建筑名称: 'Show building names',
   校园边界: 'Campus boundary',
   模型覆盖范围: 'Model coverage area',
   校园建筑: 'Campus buildings',
