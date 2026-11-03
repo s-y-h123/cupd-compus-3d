@@ -7,11 +7,12 @@ import { createWalkingPerson, setWalkingPose } from '@/lib/campus/pedestrian-mod
 import type { Locale } from '@/lib/campus/i18n';
 import { asset } from '@/lib/campus/boot';
 import { createRoboDogGait, type DogGait } from '@/lib/campus/robo-dog-gait';
+import { createRoboDogPaint } from '@/lib/campus/robo-dog-appearance';
 import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-dog-patrol';
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogSpeedChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogColor, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
   locale: Locale;
   count: number;
   speed: number;
@@ -19,6 +20,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   dogStatus: 'loading' | 'ready' | 'error';
   dogModelUrl: string;
   dogSpeed: number;
+  dogColor: string;
   dogPatrol: PatrolSnapshot;
   patrolRoutes: PatrolRouteDefinition[];
   onCountChange: (count: number) => void;
@@ -26,6 +28,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   onRoutesChange: (show: boolean) => void;
   onFocusDog: () => void;
   onDogSpeedChange: (speed: number) => void;
+  onDogColorChange: (color: string) => void;
   onStartPatrol: (id: string) => void;
   onPausePatrol: () => void;
   onResumePatrol: () => void;
@@ -37,6 +40,9 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   const [dogPreviewError, setDogPreviewError] = useState(false);
   const patrolStatusRef = useRef(dogPatrol.status);
   useEffect(() => { patrolStatusRef.current = dogPatrol.status; }, [dogPatrol.status]);
+  const dogColorRef = useRef(dogColor);
+  const paintRef = useRef<((hex: string) => void) | null>(null);
+  useEffect(() => { dogColorRef.current = dogColor; paintRef.current?.(dogColor); }, [dogColor]);
   const en = locale === 'en';
 
   useEffect(() => {
@@ -149,6 +155,8 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
       visual.position.set(-center.x, -box.min.y, -center.z);
       gait = await createRoboDogGait(loaded, visual);
       if (disposed) return;
+      paintRef.current = createRoboDogPaint(visual);
+      paintRef.current(dogColorRef.current);
       model = new THREE.Group();
       model.add(visual);
       scene.add(model);
@@ -165,6 +173,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     })().catch(() => { if (!disposed) setDogPreviewError(true); });
     return () => {
       disposed = true;
+      paintRef.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
       decoder?.dispose();
@@ -230,15 +239,24 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                   <div className="dog-patrol-stops">{patrolRoutes.find(route => route.id === selectedPatrol)?.checkpoints.join(' → ')}</div>
                   <label htmlFor="dog-patrol-speed"><span>{en ? 'Walking speed' : '巡检速度'}</span><output>{dogSpeed.toFixed(1)} m/s</output></label>
                   <input id="dog-patrol-speed" type="range" min="0.6" max="2" step="0.1" value={dogSpeed} onChange={event => onDogSpeedChange(Number(event.target.value))} />
+                  <label htmlFor="dog-color">{en ? 'Robot dog color' : '机器狗颜色'}</label>
+                  <div className="dog-color-controls">
+                    {['#c5283e', '#ed8a19', '#1975c6', '#2a9c70'].map(color =>
+                      <button key={color} type="button" className={dogColor === color ? 'active' : ''}
+                        style={{ backgroundColor: color }} aria-label={`${en ? 'Choose color' : '选择颜色'} ${color}`}
+                        aria-pressed={dogColor === color} onClick={() => onDogColorChange(color)} />)}
+                    <input id="dog-color" type="color" value={dogColor} onChange={event => onDogColorChange(event.target.value)}
+                      aria-label={en ? 'Custom robot dog color' : '自定义机器狗颜色'} />
+                  </div>
                   <div className="dog-patrol-actions">
                     <button type="button" onClick={() => onStartPatrol(selectedPatrol)}>{en ? 'Start' : '开始巡检'}</button>
                     {dogPatrol.status === 'paused' ?
                       <button type="button" onClick={onResumePatrol}>{en ? 'Resume' : '继续'}</button> :
-                      <button type="button" onClick={onPausePatrol} disabled={!['walking', 'turning', 'checking'].includes(dogPatrol.status)}>{en ? 'Pause' : '暂停'}</button>}
+                      <button type="button" onClick={onPausePatrol} disabled={!['walking', 'turning', 'yielding', 'checking'].includes(dogPatrol.status)}>{en ? 'Pause' : '暂停'}</button>}
                     <button type="button" onClick={onStopPatrol} disabled={!dogPatrol.routeId}>{en ? 'Stop' : '结束'}</button>
                   </div>
                   {dogPatrol.routeId && <output className="dog-patrol-progress">
-                    <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}</span>
+                    <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding to walkers' : '礼让行人', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}</span>
                     <progress max={Math.max(1, dogPatrol.total)} value={dogPatrol.distance} />
                     <small>{Math.round(dogPatrol.distance)} / {Math.round(dogPatrol.total)} m</small>
                   </output>}

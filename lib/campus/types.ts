@@ -144,6 +144,7 @@ export interface SceneController {
   focusRoboDog: () => boolean;
   setRoboDogFirstPerson: (on: boolean) => void;
   setRoboDogSpeed: (speed: number) => void;
+  setRoboDogColor: (hex: string) => void;
   setRoboDogPose: (position: [number, number, number], quaternion?: [number, number, number, number]) => void;
   moveRoboDog: (dt: number, direction: [number, number, number]) => void;
   getRoboDogState: () => { position: [number, number, number]; quaternion: [number, number, number, number]; speed: number; state: 'idle' | 'walking' | 'turning'; firstPerson: boolean };

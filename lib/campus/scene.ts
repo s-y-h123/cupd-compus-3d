@@ -2691,6 +2691,7 @@ export function createScene(
     setRoboDogSpeed: (speed: number) => {
       if (procedural) procedural.roboDogState.speed = Math.max(0, Math.min(20, speed));
     },
+    setRoboDogColor: (hex: string) => { procedural?.setRoboDogColor(hex); dirty = true; },
     setRoboDogPose: (position, quaternion) => {
       if (!procedural) return;
       procedural.stopRoboDogPatrol();

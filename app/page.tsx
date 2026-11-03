@@ -215,6 +215,7 @@ function CampusMap() {
   const [pedestrianRoutesVisible, setPedestrianRoutesVisible] = useState(false);
   const [dogStatus, setDogStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [dogSpeed, setDogSpeed] = useState(1.2);
+  const [dogColor, setDogColor] = useState('#c5283e');
   const [dogPatrol, setDogPatrol] = useState<PatrolSnapshot>({
     routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
     checkpointCount: 0, distance: 0, total: 0,
@@ -222,7 +223,8 @@ function CampusMap() {
   useEffect(() => {
     if (dogStatus !== 'ready') return;
     controller.current?.setRoboDogSpeed(dogSpeed);
-  }, [dogStatus, dogSpeed]);
+    controller.current?.setRoboDogColor(dogColor);
+  }, [dogStatus, dogSpeed, dogColor]);
   useEffect(() => {
     if (dogStatus !== 'ready') return;
     const refresh = () => setDogPatrol(controller.current?.getRoboDogPatrolState() ?? {
@@ -793,17 +795,18 @@ function CampusMap() {
       <div className="scene-host" ref={host} />
       <CampusModelPreview locale={locale} count={pedestrianCount} speed={pedestrianSpeed}
         dogStatus={dogStatus} dogModelUrl={asset(CUPB_CONFIG.roboDog.url)}
-        dogSpeed={dogSpeed} dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
+        dogSpeed={dogSpeed} dogColor={dogColor} dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
         onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
         onFocusDog={() => controller.current?.focusRoboDog()}
         onDogSpeedChange={setDogSpeed}
+        onDogColorChange={setDogColor}
         onStartPatrol={id => {
           const c = controller.current;
           if (c?.startRoboDogPatrol(id)) {
             c.focusRoboDog();
             setDogPatrol(c.getRoboDogPatrolState());
-          }
+          } else notify(locale === 'en' ? 'Patrol start is crowded. Try again shortly.' : '巡检起点人流密集，请稍后重试', true);
         }}
         onPausePatrol={() => { controller.current?.pauseRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}
         onResumePatrol={() => { controller.current?.resumeRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}

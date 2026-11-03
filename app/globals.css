@@ -2430,6 +2430,20 @@ kbd {
 }
 .dog-patrol-controls input[type="range"] { width: 100%; accent-color: var(--accent-solid); }
 .dog-patrol-controls output { color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.dog-color-controls { display: flex; justify-content: space-between; gap: 5px; }
+.dog-color-controls button,
+.dog-color-controls input[type="color"] {
+  width: 44px;
+  height: 44px;
+  padding: 3px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.dog-color-controls button.active { border-color: var(--text-1); box-shadow: 0 0 0 2px #fff inset; }
+.dog-color-controls input[type="color"] { background: #fff; }
+.dog-color-controls button:focus-visible,
+.dog-color-controls input[type="color"]:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
 .dog-patrol-stops { color: var(--text-2); font-size: 11px; line-height: 1.5; }
 .dog-patrol-actions { display: flex; gap: 5px; }
 .dog-patrol-actions button {

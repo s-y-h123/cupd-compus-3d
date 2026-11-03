@@ -9,7 +9,7 @@ export type PatrolRouteDefinition = {
 export type PatrolRoadLink = { from: string; to: string; points: number[][] };
 export type PatrolLeg = { from: string; to: string; points: [number, number][]; length: number };
 export type PatrolRoute = PatrolRouteDefinition & { legs: PatrolLeg[]; length: number };
-export type PatrolStatus = 'idle' | 'walking' | 'turning' | 'checking' | 'paused' | 'completed' | 'blocked';
+export type PatrolStatus = 'idle' | 'walking' | 'turning' | 'yielding' | 'checking' | 'paused' | 'completed' | 'blocked';
 export type PatrolSnapshot = {
   routeId: string | null;
   status: PatrolStatus;
