@@ -4,6 +4,9 @@ import { createSiteElements } from './site-elements';
 import { createPedestrianCrowd } from './pedestrian-crowd';
 import { treeAppearance, treeRotation } from './vegetation';
 import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { CUPB_CONFIG } from './cupb-config';
+import { buildPatrolRoute, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
+import { createRoboDogGait, type DogGait } from './robo-dog-gait';
 
 export interface RoboDogState {
   position: THREE.Vector3;
@@ -295,6 +298,29 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   const site = createSiteElements(buildings);
   baseGroup.add(site.fountainGroup, site.wallGroup, site.gateGroup);
   const collides = (x: number, z: number, pad = 3) => buildings.some((b) => b.insideCampus && x > b.bounds[0] - pad && x < b.bounds[2] + pad && -z > b.bounds[1] - pad && -z < b.bounds[3] + pad);
+  const insideRing = (x: number, north: number, ring: number[][]) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[1] > north) !== (b[1] > north) && x < (b[0] - a[0]) * (north - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+    }
+    return inside;
+  };
+  const nearRing = (x: number, north: number, ring: number[][], radius: number) => ring.some((a, i) => {
+    const b = ring[(i + 1) % ring.length];
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (north - a[1]) * dy) / Math.max(.001, dx * dx + dy * dy)));
+    return Math.hypot(x - a[0] - t * dx, north - a[1] - t * dy) < radius;
+  });
+  const collidesPatrol = (x: number, z: number) => buildings.some(b => {
+    const north = -z, radius = .35;
+    if (!b.insideCampus || x < b.bounds[0] - radius || x > b.bounds[2] + radius || north < b.bounds[1] - radius || north > b.bounds[3] + radius) return false;
+    return b.polygons.some(polygon => {
+      const [outer, ...holes] = polygon;
+      if (!insideRing(x, north, outer) && !nearRing(x, north, outer, radius)) return false;
+      return !holes.some(hole => insideRing(x, north, hole) && !nearRing(x, north, hole, radius));
+    });
+  });
   const nearRoad = (x: number, z: number) => walkSegments.some(([a, b]) => {
     const dx = b.x - a.x, dz = b.z - a.z;
     const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / Math.max(1, dx * dx + dz * dz)));
@@ -423,7 +449,79 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   const rain = new THREE.LineSegments(rainGeometry, rainMaterial);
   rain.frustumCulled = false;
   weatherGroup.add(rain); rain.visible = false;
-  const roboDogState: RoboDogState = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), speed: 0, state: 'idle', firstPerson: false };
+  const roboDogState: RoboDogState = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), speed: 1.2, state: 'idle', firstPerson: false };
+  const patrolRoutes = new Map<string, PatrolRoute>(CUPB_CONFIG.patrolRoutes.map(def => {
+    const route = buildPatrolRoute(def, pedestrianRoutes.routes);
+    return [route.id, route];
+  }));
+  let activePatrol: PatrolRoute | null = null;
+  let patrolStatus: PatrolStatus = 'idle', patrolLeg = 0, patrolPoint = 1;
+  let patrolDistance = 0, inspectionTime = 0;
+  let dogGait: DogGait | null = null;
+  const getPatrolState = (): PatrolSnapshot => ({
+    routeId: activePatrol?.id ?? null,
+    status: patrolStatus,
+    checkpoint: activePatrol?.checkpoints[Math.min(patrolLeg + 1, activePatrol.checkpoints.length - 1)] ?? null,
+    checkpointIndex: activePatrol ? Math.min(patrolLeg + 1, activePatrol.checkpoints.length - 1) : 0,
+    checkpointCount: activePatrol?.checkpoints.length ?? 0,
+    distance: patrolDistance,
+    total: activePatrol?.length ?? 0,
+  });
+  const advancePatrol = (dt: number) => {
+    if (!activePatrol || patrolStatus === 'idle' || patrolStatus === 'paused' || patrolStatus === 'blocked' || patrolStatus === 'completed') return;
+    if (patrolStatus === 'checking') {
+      inspectionTime = Math.max(0, inspectionTime - dt);
+      if (inspectionTime > 0) return;
+      if (patrolLeg === activePatrol.legs.length - 1) {
+        patrolStatus = 'completed';
+        roboDogState.state = 'idle';
+      } else {
+        patrolLeg++;
+        patrolPoint = 1;
+        patrolStatus = 'turning';
+      }
+      return;
+    }
+    const leg = activePatrol.legs[patrolLeg];
+    while (patrolPoint < leg.points.length) {
+      const point = leg.points[patrolPoint];
+      const dx = point[0] - roboDog.position.x, dz = point[1] - roboDog.position.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance < .08) { patrolPoint++; continue; }
+      const direction = new THREE.Vector3(dx / distance, 0, dz / distance);
+      const heading = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), direction);
+      const angle = roboDogState.quaternion.angleTo(heading);
+      if (angle > .055) {
+        roboDogState.quaternion.slerp(heading, Math.min(1, 1.8 * dt / angle));
+        roboDog.quaternion.copy(roboDogState.quaternion);
+        roboDogState.state = 'turning';
+        patrolStatus = 'turning';
+        return;
+      }
+      const step = Math.min(distance, roboDogState.speed * dt);
+      const nextX = roboDog.position.x + direction.x * step;
+      const nextZ = roboDog.position.z + direction.z * step;
+      // 行人路网已经限定可行走位置；建筑碰撞按真实轮廓，不能用包围盒封死庭院和楼前路。
+      if (collidesPatrol(nextX, nextZ)) {
+        patrolStatus = 'blocked';
+        roboDogState.state = 'idle';
+        return;
+      }
+      roboDog.position.set(nextX, roboDog.position.y, nextZ);
+      roboDogState.position.copy(roboDog.position);
+      roboDogState.quaternion.copy(heading);
+      roboDog.quaternion.copy(heading);
+      roboDogState.state = 'walking';
+      patrolStatus = 'walking';
+      patrolDistance = Math.min(activePatrol.length, patrolDistance + step);
+      if (distance - step < .08) patrolPoint++;
+      return;
+    }
+    patrolDistance = Math.min(activePatrol.length, activePatrol.legs.slice(0, patrolLeg + 1).reduce((sum, item) => sum + item.length, 0));
+    inspectionTime = activePatrol.stopSeconds;
+    patrolStatus = 'checking';
+    roboDogState.state = 'idle';
+  };
   let weather: Weather = 'clear';
   let timeOfDay: Preset = 'day';
   let rainStrength = 0, nightStrength = 0;
@@ -436,6 +534,35 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
     setPedestrianSpeed: (speed: number) => { pedestrianSpeed = Math.max(0, Math.min(3, speed)); },
     setPedestrianRoutesVisible: (visible: boolean) => { routeMarkers.visible = visible; },
     roboDogState,
+    startRoboDogPatrol(id: string) {
+      const route = patrolRoutes.get(id);
+      if (!robotLoaded || !route) return false;
+      activePatrol = route;
+      patrolLeg = 0;
+      patrolPoint = 1;
+      patrolDistance = 0;
+      inspectionTime = 0;
+      patrolStatus = 'turning';
+      const [x, z] = route.legs[0].points[0];
+      roboDog.position.set(x, 0, z);
+      roboDogState.position.copy(roboDog.position);
+      roboDogState.state = 'turning';
+      return true;
+    },
+    pauseRoboDogPatrol() {
+      if (activePatrol && !['completed', 'blocked'].includes(patrolStatus)) {
+        patrolStatus = 'paused';
+        roboDogState.state = 'idle';
+      }
+    },
+    resumeRoboDogPatrol() {
+      if (activePatrol && patrolStatus === 'paused') {
+        patrolStatus = inspectionTime > 0 ? 'checking' : 'turning';
+        roboDogState.state = inspectionTime > 0 ? 'idle' : 'turning';
+      }
+    },
+    stopRoboDogPatrol() { activePatrol = null; patrolStatus = 'idle'; roboDogState.state = 'idle'; },
+    getRoboDogPatrolState: getPatrolState,
     // 道路只使用原校园 GLB 提取的路面；paths 仅供行人与机器狗导航。
     async loadOriginalRoads(modelUrl: string) {
       const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
@@ -533,6 +660,8 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       LIT_BLUE_GLASS.emissive.set('#e0e9e9');
     },
     update(dt: number, time: number, camera: THREE.Camera) {
+      advancePatrol(dt);
+      dogGait?.update(dt, roboDogState.state);
       site.update(weather, time);
       const blend = Math.min(1, dt / .45);
       rainStrength += ((weather === 'rain' ? 1 : 0) - rainStrength) * blend;
@@ -596,6 +725,8 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       const visual = gltf.scene;
       // 原始 Rhino/FBX 资产以 Z 为竖直轴，转换后的 glTF 仍保留此轴向。
       visual.rotation.x = -Math.PI / 2;
+      // 当前模型头部朝向源文件 -Y，校正后统一以局部 -Z 为前方。
+      visual.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), Math.PI);
       visual.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(visual);
       const size = bounds.getSize(new THREE.Vector3());
@@ -612,12 +743,14 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       visual.traverse((object) => {
         if (object instanceof THREE.Mesh) object.castShadow = true;
       });
+      dogGait = await createRoboDogGait(gltf, visual);
       roboDog.clear();
       roboDog.add(visual);
       robotLoaded = true;
       return visual;
     },
     moveRoboDog(dt: number, direction: THREE.Vector3) {
+      if (activePatrol) { activePatrol = null; patrolStatus = 'idle'; }
       if (!robotLoaded || roboDogState.speed <= 0) return;
       const step = direction.clone().setY(0).normalize().multiplyScalar(roboDogState.speed * dt);
       const next = roboDogState.position.clone().add(step);

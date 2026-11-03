@@ -93,6 +93,7 @@ import { decodeShare, encodeShare, cameraBearing } from '@/lib/campus/share';
 import { fetchJson } from '@/lib/campus/streaming';
 import { asset, prefetchBase } from '@/lib/campus/boot';
 import { CUPB_CONFIG } from '@/lib/campus/cupb-config';
+import type { PatrolSnapshot } from '@/lib/campus/robo-dog-patrol';
 import { createCameraStore, type CameraStore } from '@/lib/campus/camera-store';
 import { CampusMinimap } from '@/components/campus-minimap';
 import { CampusViewControls } from '@/components/campus-view-controls';
@@ -213,6 +214,25 @@ function CampusMap() {
   const [pedestrianSpeed, setPedestrianSpeed] = useState(1);
   const [pedestrianRoutesVisible, setPedestrianRoutesVisible] = useState(false);
   const [dogStatus, setDogStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [dogSpeed, setDogSpeed] = useState(1.2);
+  const [dogPatrol, setDogPatrol] = useState<PatrolSnapshot>({
+    routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
+    checkpointCount: 0, distance: 0, total: 0,
+  });
+  useEffect(() => {
+    if (dogStatus !== 'ready') return;
+    controller.current?.setRoboDogSpeed(dogSpeed);
+  }, [dogStatus, dogSpeed]);
+  useEffect(() => {
+    if (dogStatus !== 'ready') return;
+    const refresh = () => setDogPatrol(controller.current?.getRoboDogPatrolState() ?? {
+      routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
+      checkpointCount: 0, distance: 0, total: 0,
+    });
+    refresh();
+    const timer = window.setInterval(refresh, 250);
+    return () => window.clearInterval(timer);
+  }, [dogStatus]);
   useEffect(() => {
     if (!ready) return;
     controller.current?.setPedestrianCount(pedestrianCount);
@@ -773,9 +793,21 @@ function CampusMap() {
       <div className="scene-host" ref={host} />
       <CampusModelPreview locale={locale} count={pedestrianCount} speed={pedestrianSpeed}
         dogStatus={dogStatus} dogModelUrl={asset(CUPB_CONFIG.roboDog.url)}
+        dogSpeed={dogSpeed} dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
         onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
-        onFocusDog={() => controller.current?.focusRoboDog()} />
+        onFocusDog={() => controller.current?.focusRoboDog()}
+        onDogSpeedChange={setDogSpeed}
+        onStartPatrol={id => {
+          const c = controller.current;
+          if (c?.startRoboDogPatrol(id)) {
+            c.focusRoboDog();
+            setDogPatrol(c.getRoboDogPatrolState());
+          }
+        }}
+        onPausePatrol={() => { controller.current?.pauseRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}
+        onResumePatrol={() => { controller.current?.resumeRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}
+        onStopPatrol={() => { controller.current?.stopRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }} />
       <header className="masthead">
         <div className="masthead-brand">
           <button

@@ -252,6 +252,8 @@ export function createScene(
   let preset: Preset = 'day';
   let selected: string | null = null;
   let viewMode: ViewMode = 'overview';
+  let dogFollow = false;
+  const dogFollowAnchor = new THREE.Vector3();
   const walkKeys = new Set<string>();
   let walkTouchForward = 0;
   let walkTouchSide = 0;
@@ -692,6 +694,7 @@ export function createScene(
   canvas.addEventListener('pointerleave', onLeave);
   canvas.addEventListener('lostpointercapture', onLostWalkPointer);
   function moveTo(target: THREE.Vector3, position: THREE.Vector3) {
+    dogFollow = false;
     dirty = true;
     tween = null;
     if (reduced.matches) {
@@ -1139,6 +1142,7 @@ export function createScene(
     dirty = true;
   }
   function setViewMode(mode: ViewMode) {
+    dogFollow = false;
     if (mode === 'overview') {
       stopWalk();
       view('overview');
@@ -2274,6 +2278,7 @@ export function createScene(
   window.addEventListener('blur', onWalkSuspend);
   document.addEventListener('visibilitychange', onWalkVisibility);
   controls.addEventListener('start', () => {
+    dogFollow = false;
     tween = null;
     autoFramed = false;
     setOrbit(false);
@@ -2435,6 +2440,16 @@ export function createScene(
       controls.target.lerpVectors(tween.fromTarget, tween.toTarget, e);
       if (f === 1) tween = null;
       dirty = true;
+    }
+    if (dogFollow && procedural?.roboDog.children.length) {
+      const current = procedural.roboDog.position;
+      if (!tween) {
+        const delta = current.clone().sub(dogFollowAnchor);
+        camera.position.add(delta);
+        controls.target.add(delta);
+        dirty = true;
+      }
+      dogFollowAnchor.copy(current);
     }
     if (dirty || moving || walking || tween) {
       cameraChanged = true;
@@ -2663,6 +2678,8 @@ export function createScene(
       composeViewport();
       const target = procedural.roboDog.position.clone().add(new THREE.Vector3(0, .5, 0));
       moveTo(target, target.clone().add(new THREE.Vector3(3.8, 2.6, 4.5)));
+      dogFollowAnchor.copy(procedural.roboDog.position);
+      dogFollow = true;
       return true;
     },
     setRoboDogFirstPerson: (on: boolean) => {
@@ -2676,6 +2693,7 @@ export function createScene(
     },
     setRoboDogPose: (position, quaternion) => {
       if (!procedural) return;
+      procedural.stopRoboDogPatrol();
       procedural.roboDogState.position.set(...position);
       procedural.roboDog.position.copy(procedural.roboDogState.position);
       if (quaternion) {
@@ -2697,6 +2715,18 @@ export function createScene(
         state: state?.state ?? 'idle',
         firstPerson: state?.firstPerson ?? false,
       };
+    },
+    startRoboDogPatrol: (id) => {
+      const started = procedural?.startRoboDogPatrol(id) ?? false;
+      if (started) dirty = true;
+      return started;
+    },
+    pauseRoboDogPatrol: () => { procedural?.pauseRoboDogPatrol(); dirty = true; },
+    resumeRoboDogPatrol: () => { procedural?.resumeRoboDogPatrol(); dirty = true; },
+    stopRoboDogPatrol: () => { procedural?.stopRoboDogPatrol(); dirty = true; },
+    getRoboDogPatrolState: () => procedural?.getRoboDogPatrolState() ?? {
+      routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
+      checkpointCount: 0, distance: 0, total: 0,
     },
     setQuality,
     setViewMode,

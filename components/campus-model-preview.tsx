@@ -6,24 +6,37 @@ import * as THREE from 'three';
 import { createWalkingPerson, setWalkingPose } from '@/lib/campus/pedestrian-model';
 import type { Locale } from '@/lib/campus/i18n';
 import { asset } from '@/lib/campus/boot';
+import { createRoboDogGait, type DogGait } from '@/lib/campus/robo-dog-gait';
+import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-dog-patrol';
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, onCountChange, onSpeedChange, onRoutesChange, onFocusDog }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogSpeedChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
   locale: Locale;
   count: number;
   speed: number;
   showRoutes: boolean;
   dogStatus: 'loading' | 'ready' | 'error';
   dogModelUrl: string;
+  dogSpeed: number;
+  dogPatrol: PatrolSnapshot;
+  patrolRoutes: PatrolRouteDefinition[];
   onCountChange: (count: number) => void;
   onSpeedChange: (speed: number) => void;
   onRoutesChange: (show: boolean) => void;
   onFocusDog: () => void;
+  onDogSpeedChange: (speed: number) => void;
+  onStartPatrol: (id: string) => void;
+  onPausePatrol: () => void;
+  onResumePatrol: () => void;
+  onStopPatrol: () => void;
 }) {
   const [tab, setTab] = useState<ModelTab | null>(null);
+  const [selectedPatrol, setSelectedPatrol] = useState(patrolRoutes[0]?.id ?? '');
   const host = useRef<HTMLDivElement>(null);
   const [dogPreviewError, setDogPreviewError] = useState(false);
+  const patrolStatusRef = useRef(dogPatrol.status);
+  useEffect(() => { patrolStatusRef.current = dogPatrol.status; }, [dogPatrol.status]);
   const en = locale === 'en';
 
   useEffect(() => {
@@ -86,6 +99,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     let disposed = false;
     let frame = 0;
     let model: THREE.Object3D | null = null;
+    let gait: DogGait | null = null;
     let decoder: import('three/addons/loaders/DRACOLoader.js').DRACOLoader | null = null;
     setDogPreviewError(false);
     const scene = new THREE.Scene();
@@ -133,10 +147,16 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
       box.setFromObject(visual);
       const center = box.getCenter(new THREE.Vector3());
       visual.position.set(-center.x, -box.min.y, -center.z);
+      gait = await createRoboDogGait(loaded, visual);
+      if (disposed) return;
       model = new THREE.Group();
       model.add(visual);
       scene.add(model);
+      let lastTime = 0;
       const animate = (time: number) => {
+        const dt = lastTime ? Math.min(.08, (time - lastTime) / 1000) : 0;
+        lastTime = time;
+        gait?.update(dt, patrolStatusRef.current === 'walking' ? 'walking' : patrolStatusRef.current === 'turning' ? 'turning' : 'idle');
         if (model) model.rotation.y = -.35 + Math.sin(time * .00025) * .3;
         renderer.render(scene, camera);
         frame = requestAnimationFrame(animate);
@@ -200,7 +220,30 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
             </div> : <>
               <div className="model-preview-canvas" ref={host} />
               {dogStatus === 'loading' && <div className="model-preview-loading">{en ? 'Loading robot dog…' : '正在加载机器狗…'}</div>}
-              {dogStatus === 'ready' && <button type="button" className="dog-focus-button" onClick={onFocusDog}>{en ? 'View in campus' : '在校园中查看'}</button>}
+              {dogStatus === 'ready' && <>
+                <button type="button" className="dog-focus-button" onClick={onFocusDog}>{en ? 'Follow in campus' : '在校园中跟随'}</button>
+                <div className="dog-patrol-controls">
+                  <label htmlFor="dog-patrol-route">{en ? 'Patrol route' : '巡检路线'}</label>
+                  <select id="dog-patrol-route" value={selectedPatrol} onChange={event => setSelectedPatrol(event.target.value)}>
+                    {patrolRoutes.map(route => <option key={route.id} value={route.id}>{en ? route.nameEn : route.name}</option>)}
+                  </select>
+                  <div className="dog-patrol-stops">{patrolRoutes.find(route => route.id === selectedPatrol)?.checkpoints.join(' → ')}</div>
+                  <label htmlFor="dog-patrol-speed"><span>{en ? 'Walking speed' : '巡检速度'}</span><output>{dogSpeed.toFixed(1)} m/s</output></label>
+                  <input id="dog-patrol-speed" type="range" min="0.6" max="2" step="0.1" value={dogSpeed} onChange={event => onDogSpeedChange(Number(event.target.value))} />
+                  <div className="dog-patrol-actions">
+                    <button type="button" onClick={() => onStartPatrol(selectedPatrol)}>{en ? 'Start' : '开始巡检'}</button>
+                    {dogPatrol.status === 'paused' ?
+                      <button type="button" onClick={onResumePatrol}>{en ? 'Resume' : '继续'}</button> :
+                      <button type="button" onClick={onPausePatrol} disabled={!['walking', 'turning', 'checking'].includes(dogPatrol.status)}>{en ? 'Pause' : '暂停'}</button>}
+                    <button type="button" onClick={onStopPatrol} disabled={!dogPatrol.routeId}>{en ? 'Stop' : '结束'}</button>
+                  </div>
+                  {dogPatrol.routeId && <output className="dog-patrol-progress">
+                    <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}</span>
+                    <progress max={Math.max(1, dogPatrol.total)} value={dogPatrol.distance} />
+                    <small>{Math.round(dogPatrol.distance)} / {Math.round(dogPatrol.total)} m</small>
+                  </output>}
+                </div>
+              </>}
             </>}
         </section>
       )}

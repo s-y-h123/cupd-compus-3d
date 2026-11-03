@@ -2406,6 +2406,51 @@ kbd {
   cursor: pointer;
 }
 .dog-focus-button:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
+.dog-patrol-controls {
+  display: grid;
+  gap: 8px;
+  padding: 12px 2px 2px;
+  color: var(--text-1);
+  font-size: 12px;
+}
+.dog-patrol-controls label {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+}
+.dog-patrol-controls select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-1);
+  font: inherit;
+}
+.dog-patrol-controls input[type="range"] { width: 100%; accent-color: var(--accent-solid); }
+.dog-patrol-controls output { color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.dog-patrol-stops { color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.dog-patrol-actions { display: flex; gap: 5px; }
+.dog-patrol-actions button {
+  flex: 1;
+  min-height: 44px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dog-patrol-actions button:first-child { border-color: var(--accent-solid); background: var(--accent-solid); color: #fff; }
+.dog-patrol-actions button:disabled { opacity: .45; cursor: default; }
+.dog-patrol-controls select:focus-visible,
+.dog-patrol-actions button:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
+.dog-patrol-progress { display: grid; gap: 4px; color: var(--text-2); }
+.dog-patrol-progress progress { width: 100%; height: 7px; accent-color: var(--accent-solid); }
+.dog-patrol-progress small { text-align: right; font-variant-numeric: tabular-nums; }
 .model-preview-loading {
   padding: 8px 12px;
   color: var(--text-2);

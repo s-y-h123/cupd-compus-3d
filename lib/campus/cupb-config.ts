@@ -8,6 +8,7 @@ import type { Landmark } from './types';
 export const CUPB_CONFIG: {
   model: { url: string; origin: [number, number]; units: 'meters' };
   roboDog: { url: string; start: [number, number, number] };
+  patrolRoutes: { id: string; name: string; nameEn: string; checkpoints: string[]; stopSeconds: number }[];
   overview: { target: [number, number, number]; position: [number, number, number] };
   walk: {
     start: [number, number];
@@ -31,6 +32,15 @@ export const CUPB_CONFIG: {
   },
   // 机器狗模型按需加载；起点在北门通往图书馆的步道上，坐标为 Three.js [东, 高, 南]。
   roboDog: { url: 'models/cupb/robot-dog.glb', start: [90, 0, -379] },
+  // 机器狗巡检路线复用已核对的行人道路端点，按地标停留后再出发。
+  patrolRoutes: [
+    { id: 'north-gates', name: '北校区出入口', nameEn: 'North campus gates', checkpoints: ['东门', '主楼A座', '图书馆', '北门'], stopSeconds: 10 },
+    { id: 'north-living', name: '北校区生活区', nameEn: 'North campus living', checkpoints: ['北门', '图书馆', '第二食堂', '青年园公寓2号楼'], stopSeconds: 10 },
+    { id: 'north-public', name: '北校区公共设施', nameEn: 'North campus facilities', checkpoints: ['体育馆', '第一食堂', '学生活动中心'], stopSeconds: 10 },
+    { id: 'south-teaching', name: '南校区教学区', nameEn: 'South campus teaching', checkpoints: ['南门', '第四教学楼', '第三教学楼', '联合纳米岩石物理实验室'], stopSeconds: 10 },
+    { id: 'south-labs', name: '南校区实验区', nameEn: 'South campus labs', checkpoints: ['能源材料微结构实验室', '第四教学楼', '地质楼', '声波测井实验室'], stopSeconds: 10 },
+    { id: 'south-gate', name: '南校区出入口', nameEn: 'South campus gate', checkpoints: ['中油大厦A座', '南门'], stopSeconds: 10 },
+  ],
   overview: {
     target: [0, 15, 0],
     position: [720, 870, 940],

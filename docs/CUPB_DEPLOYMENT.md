@@ -4,9 +4,9 @@
 
 ## 1. 场景数据与坐标
 
-运行时由 `lib/campus/procedural-campus.ts` 从 `public/data/buildings.json` 生成建筑、绿化和行人，道路只加载 `public/models/cupb/original-roads.glb`。该路面由 `scripts/extract_cupb_roads.py` 从原 `campus.glb` 提取；`public/data/pedestrian-routes.json` 是沿原路面、绕开建筑和中央喷泉预计算的南北校区行走路线，`infrastructure-map.json` 的路径仍用于机器狗导航与道路沿线树灯布置，不绘制路面。修改行人目标地点可编辑 `scripts/prepare-pedestrian-routes.py` 的 `PAIRS`，然后运行此脚本。修改已有建筑轮廓则更新同源 GeoJSON 后运行 `python scripts/prepare-cupb-data.py`。
+运行时由 `lib/campus/procedural-campus.ts` 从 `public/data/buildings.json` 生成建筑、绿化和行人，道路只加载 `public/models/cupb/original-roads.glb`。该路面由 `scripts/extract_cupb_roads.py` 从原 `campus.glb` 提取；`public/data/pedestrian-routes.json` 是沿原路面、绕开建筑和中央喷泉预计算的南北校区行走路线，机器狗巡检也复用这些已连通路段。`infrastructure-map.json` 的路径仅用于道路沿线树灯布置，不绘制路面。修改行人目标地点可编辑 `scripts/prepare-pedestrian-routes.py` 的 `PAIRS`，然后运行此脚本。修改已有建筑轮廓则更新同源 GeoJSON 后运行 `python scripts/prepare-cupb-data.py`。
 
-机器狗模型位于 `public/models/cupb/robot-dog.glb`，约 13 MB。来源是用户提供的 FBX，转为 Three.js 可直接加载的 Draco 压缩 GLB；网格和材质保留，源文件没有骨骼动画。校园加载完成后自动载入机器狗，初始位置在 `lib/campus/cupb-config.ts` 的 `roboDog.start`；右上角机器狗面板可预览模型并一键飞到校园中的机器狗。`SceneController` 保留 `loadRoboDog(modelUrl)`、`focusRoboDog`、`setRoboDogPose`、`setRoboDogSpeed`、`moveRoboDog`、`setRoboDogFirstPerson` 和 `getRoboDogState` 接口，供后续巡检路线与动作接入。当前机器狗是静态姿态，不宣称四肢步行动画已完成。
+机器狗模型位于 `public/models/cupb/robot-dog.glb`，约 13 MB。来源是用户提供的 FBX，转为 Three.js 可直接加载的 Draco 压缩 GLB；网格和材质保留。源文件没有骨骼动画，当前使用模型中四条腿的独立部件生成程序化步态。校园加载完成后自动载入机器狗；右上角机器狗面板可选择六条路线，开始、暂停、继续和结束巡检，调节速度并跟随镜头。路线及停留秒数在 `lib/campus/cupb-config.ts` 的 `patrolRoutes` 中，必须使用 `public/data/pedestrian-routes.json` 内已连通的路段。到达每个检查点停留 10 秒，转弯时先原地转身。当前没有真实传感器或自动异常识别，检查点仅表示演示中的停留位置。
 
 场景配置集中在 `lib/campus/cupb-config.ts`。坐标为米制 X 东、Z 南，地标、建筑和道路须同源。旧 HTML 的 `0–100` 局部坐标不能直接复用。
 

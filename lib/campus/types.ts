@@ -1,4 +1,5 @@
 import type { CameraSnapshot } from './share';
+import type { PatrolSnapshot } from './robo-dog-patrol';
 export type LayerKey =
   | 'buildings'
   | 'vegetation'
@@ -146,6 +147,11 @@ export interface SceneController {
   setRoboDogPose: (position: [number, number, number], quaternion?: [number, number, number, number]) => void;
   moveRoboDog: (dt: number, direction: [number, number, number]) => void;
   getRoboDogState: () => { position: [number, number, number]; quaternion: [number, number, number, number]; speed: number; state: 'idle' | 'walking' | 'turning'; firstPerson: boolean };
+  startRoboDogPatrol: (id: string) => boolean;
+  pauseRoboDogPatrol: () => void;
+  resumeRoboDogPatrol: () => void;
+  stopRoboDogPatrol: () => void;
+  getRoboDogPatrolState: () => PatrolSnapshot;
   setQuality: (q: Quality) => void;
   setViewMode: (mode: ViewMode) => void;
   /** Touch/onscreen movement: forward +1 is ahead, side +1 is right. */
