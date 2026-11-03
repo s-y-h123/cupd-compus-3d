@@ -2672,11 +2672,12 @@ export function createScene(
       procedural?.setPedestrianRoutesVisible(visible);
       dirty = true;
     },
-    loadRoboDog: async (modelUrl: string) => {
+    loadRoboDog: async (modelUrl: string, onProgress?: (fraction: number | null) => void) => {
       if (!procedural) throw new Error('校园尚未加载完成');
-      await procedural.loadRoboDog(modelUrl, loader);
+      await procedural.loadRoboDog(modelUrl, loader, onProgress);
       dirty = true;
     },
+    getRoboDogPreview: () => procedural?.roboDog.children[0]?.clone(true) ?? null,
     focusRoboDog: () => {
       if (!procedural?.roboDog.children.length) return false;
       stopWalk();

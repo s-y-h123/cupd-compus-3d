@@ -214,6 +214,8 @@ function CampusMap() {
   const [pedestrianSpeed, setPedestrianSpeed] = useState(1);
   const [pedestrianRoutesVisible, setPedestrianRoutesVisible] = useState(false);
   const [dogStatus, setDogStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [dogProgress, setDogProgress] = useState<number | null>(null);
+  const dogLoadId = useRef(0);
   const [dogSpeed, setDogSpeed] = useState(1.2);
   const [dogColor, setDogColor] = useState('#c5283e');
   const [dogFirstPerson, setDogFirstPerson] = useState(false);
@@ -221,6 +223,24 @@ function CampusMap() {
     routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
     checkpointCount: 0, distance: 0, total: 0,
   });
+  const loadDog = useCallback((c: SceneController) => {
+    const id = ++dogLoadId.current;
+    setDogStatus('loading');
+    setDogProgress(null);
+    void c.loadRoboDog(asset(CUPB_CONFIG.roboDog.url), fraction => {
+      if (dogLoadId.current === id) setDogProgress(fraction);
+    }).then(() => {
+      if (dogLoadId.current !== id) return;
+      c.setRoboDogPose(CUPB_CONFIG.roboDog.start);
+      setDogStatus('ready');
+    }).catch(error => {
+      if (dogLoadId.current !== id) return;
+      console.error('机器狗模型加载失败', error);
+      setDogStatus('error');
+    });
+  }, []);
+  const cancelDogLoad = useCallback(() => { dogLoadId.current++; }, []);
+  const getDogPreview = useCallback(() => controller.current?.getRoboDogPreview() ?? null, []);
   useEffect(() => {
     if (dogStatus !== 'ready') return;
     controller.current?.setRoboDogSpeed(dogSpeed);
@@ -318,16 +338,7 @@ function CampusMap() {
               onReady: () => {
                 if (!active) return;
                 setReady(true);
-                setDogStatus('loading');
-                void c.loadRoboDog(asset(CUPB_CONFIG.roboDog.url))
-                  .then(() => {
-                    if (!active) return;
-                    c.setRoboDogPose(CUPB_CONFIG.roboDog.start);
-                    setDogStatus('ready');
-                  })
-                  .catch(() => {
-                    if (active) setDogStatus('error');
-                  });
+                loadDog(c);
               },
               onSelect: (id, origin = 'manual') => {
                 if (active) {
@@ -440,12 +451,13 @@ function CampusMap() {
       });
     return () => {
       active = false;
+      cancelDogLoad();
       lifetime.abort();
       cleanup?.();
       controller.current = null;
     };
     // The store is created once; listing it only satisfies the hook rule.
-  }, [retrySeed, cameraStore, loadStatusStore]);
+  }, [retrySeed, cameraStore, loadStatusStore, loadDog, cancelDogLoad]);
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(preference.matches);
@@ -798,7 +810,8 @@ function CampusMap() {
     <main className={`campus-app mode-${viewMode} ${keyboardOpen ? 'keyboard-open' : ''}`}>
       <div className="scene-host" ref={host} />
       <CampusModelPreview locale={locale} count={pedestrianCount} speed={pedestrianSpeed}
-        dogStatus={dogStatus} dogModelUrl={asset(CUPB_CONFIG.roboDog.url)}
+        dogStatus={dogStatus} dogProgress={dogProgress} getDogPreview={getDogPreview}
+        onRetryDog={() => { if (controller.current) loadDog(controller.current); }}
         dogSpeed={dogSpeed} dogColor={dogColor} dogFirstPerson={dogFirstPerson}
         dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}

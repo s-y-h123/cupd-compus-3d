@@ -5,20 +5,19 @@ import { Dog, PersonStanding, X } from 'lucide-react';
 import * as THREE from 'three';
 import { createWalkingPerson, setWalkingPose } from '@/lib/campus/pedestrian-model';
 import type { Locale } from '@/lib/campus/i18n';
-import { asset } from '@/lib/campus/boot';
-import { createRoboDogGait, type DogGait } from '@/lib/campus/robo-dog-gait';
 import { createRoboDogPaint } from '@/lib/campus/robo-dog-appearance';
 import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-dog-patrol';
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog }: {
   locale: Locale;
   count: number;
   speed: number;
   showRoutes: boolean;
   dogStatus: 'loading' | 'ready' | 'error';
-  dogModelUrl: string;
+  dogProgress: number | null;
+  getDogPreview: () => THREE.Object3D | null;
   dogSpeed: number;
   dogColor: string;
   dogFirstPerson: boolean;
@@ -35,11 +34,13 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   onPausePatrol: () => void;
   onResumePatrol: () => void;
   onStopPatrol: () => void;
+  onRetryDog: () => void;
 }) {
   const [tab, setTab] = useState<ModelTab | null>(null);
   const [selectedPatrol, setSelectedPatrol] = useState(patrolRoutes[0]?.id ?? '');
   const host = useRef<HTMLDivElement>(null);
   const [dogPreviewError, setDogPreviewError] = useState(false);
+  const [dogPreviewLoading, setDogPreviewLoading] = useState(false);
   const patrolStatusRef = useRef(dogPatrol.status);
   useEffect(() => { patrolStatusRef.current = dogPatrol.status; }, [dogPatrol.status]);
   const dogColorRef = useRef(dogColor);
@@ -107,9 +108,10 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     let disposed = false;
     let frame = 0;
     let model: THREE.Object3D | null = null;
-    let gait: DogGait | null = null;
-    let decoder: import('three/addons/loaders/DRACOLoader.js').DRACOLoader | null = null;
+    let visual: THREE.Object3D | null = null;
+    let updateGait: ((dt: number, motion: 'idle' | 'walking' | 'turning') => void) | null = null;
     setDogPreviewError(false);
+    setDogPreviewLoading(true);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#dfe5e5');
     const camera = new THREE.PerspectiveCamera(38, 1, .01, 50);
@@ -138,53 +140,66 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     observer.observe(node);
     resize();
     void (async () => {
-      const [{ GLTFLoader }, { DRACOLoader }] = await Promise.all([
-        import('three/addons/loaders/GLTFLoader.js'),
-        import('three/addons/loaders/DRACOLoader.js'),
-      ]);
-      decoder = new DRACOLoader().setDecoderPath(asset('draco/'));
-      const loaded = await new GLTFLoader().setDRACOLoader(decoder).loadAsync(dogModelUrl);
-      if (disposed) return;
-      const visual = loaded.scene;
-      visual.rotation.x = -Math.PI / 2;
-      visual.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(visual);
-      const size = box.getSize(new THREE.Vector3());
-      visual.scale.multiplyScalar(1.1 / Math.max(size.x, size.z));
-      visual.updateMatrixWorld(true);
-      box.setFromObject(visual);
-      const center = box.getCenter(new THREE.Vector3());
-      visual.position.set(-center.x, -box.min.y, -center.z);
-      gait = await createRoboDogGait(loaded, visual);
-      if (disposed) return;
+      visual = getDogPreview();
+      if (!visual) throw new Error('机器狗模型尚未准备好');
+      // 复用场景中的几何体，仅复制材质，预览不再重复下载与解码 GLB。
+      visual.traverse(object => {
+        if (object instanceof THREE.Mesh)
+          object.material = Array.isArray(object.material)
+            ? object.material.map(material => material.clone())
+            : object.material.clone();
+      });
+      const hips = [0, 1, 2, 3].map(i => visual?.getObjectByName(`roboDogHip${i}`));
+      const knees = [0, 1, 2, 3].map(i => visual?.getObjectByName(`roboDogKnee${i}`));
+      if (hips.every(Boolean) && knees.every(Boolean)) {
+        let phase = 0, blend = 0;
+        const idleHeight = visual.position.y;
+        updateGait = (dt, motion) => {
+          const target = motion === 'walking' ? 1 : motion === 'turning' ? .55 : 0;
+          blend += (target - blend) * Math.min(1, dt * 7);
+          if (motion !== 'idle') phase += dt * (motion === 'turning' ? 5 : 8);
+          for (let i = 0; i < 4; i++) {
+            const wave = Math.sin(phase + (i === 0 || i === 3 ? 0 : Math.PI));
+            hips[i]!.rotation.x = wave * .27 * blend;
+            knees[i]!.rotation.x = Math.max(0, -wave) * .34 * blend;
+          }
+          visual!.position.y = idleHeight + Math.abs(Math.sin(phase * 2)) * .012 * blend;
+        };
+      }
       paintRef.current = createRoboDogPaint(visual);
       paintRef.current(dogColorRef.current);
       model = new THREE.Group();
       model.add(visual);
       scene.add(model);
+      setDogPreviewLoading(false);
       let lastTime = 0;
       const animate = (time: number) => {
         const dt = lastTime ? Math.min(.08, (time - lastTime) / 1000) : 0;
         lastTime = time;
-        gait?.update(dt, patrolStatusRef.current === 'walking' ? 'walking' : patrolStatusRef.current === 'turning' ? 'turning' : 'idle');
+        updateGait?.(dt, patrolStatusRef.current === 'walking' ? 'walking' : patrolStatusRef.current === 'turning' ? 'turning' : 'idle');
         if (model) model.rotation.y = -.35 + Math.sin(time * .00025) * .3;
         renderer.render(scene, camera);
         frame = requestAnimationFrame(animate);
       };
       frame = requestAnimationFrame(animate);
-    })().catch(() => { if (!disposed) setDogPreviewError(true); });
+    })().catch(() => { if (!disposed) { setDogPreviewLoading(false); setDogPreviewError(true); } });
     return () => {
       disposed = true;
       paintRef.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
-      decoder?.dispose();
+      visual?.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+          if (Array.isArray(object.material)) object.material.forEach(material => material.dispose());
+          else object.material.dispose();
+        }
+      });
       ground.geometry.dispose();
       ground.material.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [tab, dogStatus, dogModelUrl]);
+  }, [tab, dogStatus, getDogPreview]);
 
   return (
     <div className="campus-model-preview">
@@ -225,12 +240,21 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
               <small>{en ? 'Set speed to 0 to pause walkers.' : '速度设为 0 可暂停行人。'}</small>
             </div>
           </> :
-            dogStatus === 'error' || dogPreviewError ? <div className="model-preview-empty">
+            dogStatus === 'error' ? <div className="model-preview-empty">
               <Dog size={26} aria-hidden="true" />
               <span>{en ? 'Model failed to load' : '模型加载失败'}</span>
+              <button type="button" className="dog-retry-button" onClick={onRetryDog}>{en ? 'Retry' : '重新加载'}</button>
+            </div> : dogStatus === 'loading' ? <output className="model-preview-empty">
+              <Dog size={26} aria-hidden="true" />
+              <span>{dogProgress === 1 ? (en ? 'Preparing the model…' : '正在解析模型…') : dogProgress !== null ? (en ? `Downloading model ${Math.round(dogProgress * 100)}%` : `下载模型 ${Math.round(dogProgress * 100)}%`) : (en ? 'Loading robot dog…' : '正在加载机器狗…')}</span>
+              {dogProgress !== null && <progress max="1" value={dogProgress} aria-label={en ? 'Robot dog download progress' : '机器狗下载进度'} />}
+            </output> : dogPreviewError ? <div className="model-preview-empty">
+              <Dog size={26} aria-hidden="true" />
+              <span>{en ? 'Preview failed to load' : '模型预览加载失败'}</span>
+              <button type="button" className="dog-retry-button" onClick={() => { setTab(null); window.setTimeout(() => setTab('dog'), 0); }}>{en ? 'Retry preview' : '重试预览'}</button>
             </div> : <>
               <div className="model-preview-canvas" ref={host} />
-              {dogStatus === 'loading' && <div className="model-preview-loading">{en ? 'Loading robot dog…' : '正在加载机器狗…'}</div>}
+              {dogPreviewLoading && <output className="model-preview-loading">{en ? 'Preparing preview…' : '正在生成预览…'}</output>}
               {dogStatus === 'ready' && <>
                 <div className="dog-view-actions">
                   <button type="button" className="dog-focus-button" onClick={onFocusDog}>{en ? 'Follow in campus' : '在校园中跟随'}</button>

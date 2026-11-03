@@ -1,5 +1,6 @@
 import type { CameraSnapshot } from './share';
 import type { PatrolSnapshot } from './robo-dog-patrol';
+import type { Object3D } from 'three';
 export type LayerKey =
   | 'buildings'
   | 'vegetation'
@@ -140,7 +141,8 @@ export interface SceneController {
   setPedestrianSpeed: (speed: number) => void;
   setPedestrianRoutesVisible: (visible: boolean) => void;
   /** 真实机器狗 GLB/GLTF 仅在显式调用时加载；初始容器为空。 */
-  loadRoboDog: (modelUrl: string) => Promise<void>;
+  loadRoboDog: (modelUrl: string, onProgress?: (fraction: number | null) => void) => Promise<void>;
+  getRoboDogPreview: () => Object3D | null;
   focusRoboDog: () => boolean;
   setRoboDogFirstPerson: (on: boolean) => void;
   setRoboDogSpeed: (speed: number) => void;

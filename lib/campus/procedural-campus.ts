@@ -776,10 +776,13 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
         rainGeometry.attributes.position.needsUpdate = true;
       }
     },
-    async loadRoboDog(modelUrl: string, modelLoader?: GLTFLoader) {
+    async loadRoboDog(modelUrl: string, modelLoader?: GLTFLoader, onProgress?: (fraction: number | null) => void) {
       if (!modelUrl) throw new Error('机器狗模型 URL 不能为空');
       const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
-      const gltf = await (modelLoader ?? new GLTFLoader()).loadAsync(modelUrl);
+      const gltf = await (modelLoader ?? new GLTFLoader()).loadAsync(modelUrl, event => {
+        onProgress?.(event.total > 0 ? Math.min(1, event.loaded / event.total) : null);
+      });
+      onProgress?.(1);
       const visual = gltf.scene;
       // 原始 Rhino/FBX 资产以 Z 为竖直轴，转换后的 glTF 仍保留此轴向。
       visual.rotation.x = -Math.PI / 2;

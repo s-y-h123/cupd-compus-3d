@@ -2516,6 +2516,8 @@ kbd {
   font-size: 12px;
 }
 .model-preview-empty small { font-size: 10px; }
+.model-preview-empty progress { width: min(78%, 240px); height: 7px; accent-color: var(--accent-solid); }
+.dog-retry-button { min-width: 112px; min-height: 44px; border: 1px solid var(--accent-solid); border-radius: 8px; background: #fff; color: var(--accent-solid); font-weight: 600; cursor: pointer; }
 .walk-overlay {
   position: absolute;
   z-index: 6;
