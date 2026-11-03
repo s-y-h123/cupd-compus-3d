@@ -12,7 +12,7 @@ import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-do
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogColor, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogModelUrl, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol }: {
   locale: Locale;
   count: number;
   speed: number;
@@ -21,12 +21,14 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   dogModelUrl: string;
   dogSpeed: number;
   dogColor: string;
+  dogFirstPerson: boolean;
   dogPatrol: PatrolSnapshot;
   patrolRoutes: PatrolRouteDefinition[];
   onCountChange: (count: number) => void;
   onSpeedChange: (speed: number) => void;
   onRoutesChange: (show: boolean) => void;
   onFocusDog: () => void;
+  onDogFirstPersonChange: () => void;
   onDogSpeedChange: (speed: number) => void;
   onDogColorChange: (color: string) => void;
   onStartPatrol: (id: string) => void;
@@ -230,7 +232,16 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
               <div className="model-preview-canvas" ref={host} />
               {dogStatus === 'loading' && <div className="model-preview-loading">{en ? 'Loading robot dog…' : '正在加载机器狗…'}</div>}
               {dogStatus === 'ready' && <>
-                <button type="button" className="dog-focus-button" onClick={onFocusDog}>{en ? 'Follow in campus' : '在校园中跟随'}</button>
+                <div className="dog-view-actions">
+                  <button type="button" className="dog-focus-button" onClick={onFocusDog}>{en ? 'Follow in campus' : '在校园中跟随'}</button>
+                  <button type="button" className={`dog-first-person-button${dogFirstPerson ? ' active' : ''}`}
+                    aria-pressed={dogFirstPerson} onClick={() => {
+                      onDogFirstPersonChange();
+                      if (!dogFirstPerson) setTab(null);
+                    }}>
+                    {dogFirstPerson ? (en ? 'Back to overview' : '返回全景') : (en ? 'Dog first person' : '机器狗第一视角')}
+                  </button>
+                </div>
                 <div className="dog-patrol-controls">
                   <label htmlFor="dog-patrol-route">{en ? 'Patrol route' : '巡检路线'}</label>
                   <select id="dog-patrol-route" value={selectedPatrol} onChange={event => setSelectedPatrol(event.target.value)}>

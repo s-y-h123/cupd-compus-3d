@@ -2392,10 +2392,10 @@ kbd {
 }
 .model-preview-canvas { height: 152px; }
 .dog-preview-panel .model-preview-canvas { height: 210px; }
+.dog-view-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 9px; }
 .dog-focus-button {
   width: 100%;
   min-height: 44px;
-  margin-top: 9px;
   border: 1px solid var(--accent-solid);
   border-radius: 8px;
   background: var(--accent-solid);
@@ -2406,6 +2406,20 @@ kbd {
   cursor: pointer;
 }
 .dog-focus-button:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
+.dog-first-person-button {
+  min-height: 44px;
+  padding: 5px;
+  border: 1px solid var(--accent-solid);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dog-first-person-button.active { background: var(--accent-solid); color: #fff; }
+.dog-first-person-button:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
 .dog-patrol-controls {
   display: grid;
   gap: 8px;
@@ -2581,6 +2595,7 @@ kbd {
   font-size: 12px;
   font-weight: 700;
 }
+.walk-overlay.dog-camera .walk-hint button { min-height: 44px; }
 
 @media (max-width: 759px) {
   .campus-model-preview { top: 132px; right: 70px; }
@@ -2702,6 +2717,11 @@ kbd {
     max-width: 190px;
     padding: 10px;
     gap: 4px;
+  }
+  .walk-overlay.dog-camera .walk-hint {
+    left: 10px;
+    right: auto;
+    max-width: min(190px, calc(100vw - 100px));
   }
   .walk-hint strong {
     display: none;

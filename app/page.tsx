@@ -216,6 +216,7 @@ function CampusMap() {
   const [dogStatus, setDogStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [dogSpeed, setDogSpeed] = useState(1.2);
   const [dogColor, setDogColor] = useState('#c5283e');
+  const [dogFirstPerson, setDogFirstPerson] = useState(false);
   const [dogPatrol, setDogPatrol] = useState<PatrolSnapshot>({
     routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
     checkpointCount: 0, distance: 0, total: 0,
@@ -372,6 +373,7 @@ function CampusMap() {
               onViewMode: (mode) => {
                 if (active) {
                   setViewMode(mode);
+                  if (mode === 'overview') setDogFirstPerson(false);
                   if (mode === 'overview' && window.innerWidth < 760)
                     setCollapsed(false);
                 }
@@ -671,6 +673,7 @@ function CampusMap() {
     controller.current?.setQuality(q);
   }
   function changeViewMode(mode: ViewMode) {
+    setDogFirstPerson(false);
     setTour(false);
     controller.current?.setOrbit(false);
     walkPointers.current.clear();
@@ -689,6 +692,7 @@ function CampusMap() {
     }
     setViewMode(mode);
     controller.current?.setViewMode(mode);
+    if (mode === 'walk' && window.innerWidth < 760) setCollapsed(true);
   }
   function updateWalkInput() {
     let forward = 0;
@@ -795,16 +799,32 @@ function CampusMap() {
       <div className="scene-host" ref={host} />
       <CampusModelPreview locale={locale} count={pedestrianCount} speed={pedestrianSpeed}
         dogStatus={dogStatus} dogModelUrl={asset(CUPB_CONFIG.roboDog.url)}
-        dogSpeed={dogSpeed} dogColor={dogColor} dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
+        dogSpeed={dogSpeed} dogColor={dogColor} dogFirstPerson={dogFirstPerson}
+        dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
         onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
         onFocusDog={() => controller.current?.focusRoboDog()}
+        onDogFirstPersonChange={() => {
+          const c = controller.current;
+          if (!c) return;
+          if (dogFirstPerson) {
+            changeViewMode('overview');
+            return;
+          }
+          changeViewMode('walk');
+          c.setRoboDogFirstPerson(true);
+          if (c.getRoboDogState().firstPerson) setDogFirstPerson(true);
+          else {
+            changeViewMode('overview');
+            notify(locale === 'en' ? 'Robot dog view is unavailable.' : '机器狗视角暂不可用', true);
+          }
+        }}
         onDogSpeedChange={setDogSpeed}
         onDogColorChange={setDogColor}
         onStartPatrol={id => {
           const c = controller.current;
           if (c?.startRoboDogPatrol(id)) {
-            c.focusRoboDog();
+            if (!c.getRoboDogState().firstPerson) c.focusRoboDog();
             setDogPatrol(c.getRoboDogPatrolState());
           } else notify(locale === 'en' ? 'Patrol start is crowded. Try again shortly.' : '巡检起点人流密集，请稍后重试', true);
         }}
@@ -835,6 +855,7 @@ function CampusMap() {
         <ViewModeSwitch
           className="mode-switch-mobile"
           mode={viewMode}
+          dogFirstPerson={dogFirstPerson}
           ready={ready}
           onChange={changeViewMode}
         />
@@ -900,6 +921,7 @@ function CampusMap() {
         <ViewModeSwitch
           className="mode-switch-panel"
           mode={viewMode}
+          dogFirstPerson={dogFirstPerson}
           ready={ready}
           onChange={changeViewMode}
         />
@@ -1352,19 +1374,25 @@ function CampusMap() {
         </div>
       </aside>
       {viewMode === 'walk' && ready && (
-        <div className="walk-overlay">
+        <div className={`walk-overlay${dogFirstPerson ? ' dog-camera' : ''}`}>
           <span className="walk-crosshair" aria-hidden="true" />
           <div className="walk-hint">
-            <span className="walk-hint-kicker">{t('第一视角漫游')}</span>
-            <strong>W A S D</strong>
-            <span>{t('移动 · Shift 加速 · 拖拽转向')}</span>
-            <span className="mobile-walk-usage">{t('按住方向键移动 · 拖拽转向')}</span>
+            <span className="walk-hint-kicker">{dogFirstPerson ? (locale === 'en' ? 'Robot dog view' : '机器狗第一视角') : t('第一视角漫游')}</span>
+            {dogFirstPerson ? <>
+              <strong>{locale === 'en' ? 'Patrol camera' : '巡检镜头'}</strong>
+              <span>{locale === 'en' ? 'Start a route in the robot dog panel · Drag to look around' : '在机器狗面板启动路线 · 拖拽环顾'}</span>
+              <span className="mobile-walk-usage">{locale === 'en' ? 'Start a route in the dog panel · Drag to look' : '在机器狗面板启动路线 · 拖拽环顾'}</span>
+            </> : <>
+              <strong>W A S D</strong>
+              <span>{t('移动 · Shift 加速 · 拖拽转向')}</span>
+              <span className="mobile-walk-usage">{t('按住方向键移动 · 拖拽转向')}</span>
+            </>}
             <button onClick={() => changeViewMode('overview')}>
               <ScanEye size={16} />
               {t('返回全景观看')}
             </button>
           </div>
-          <div className="walk-pad" aria-label={t('第一视角移动控制')}>
+          {!dogFirstPerson && <div className="walk-pad" aria-label={t('第一视角移动控制')}>
             <button
               className="walk-pad-forward"
               aria-label={t('向前移动')}
@@ -1397,7 +1425,7 @@ function CampusMap() {
               onPointerCancel={stopWalkMove}
               onLostPointerCapture={stopWalkMove}
             ><ChevronsDown size={21} /></button>
-          </div>
+          </div>}
         </div>
       )}
       <Tooltip.Provider delay={200}>
@@ -1788,15 +1816,17 @@ function BuildingResults({
 function ViewModeSwitch({
   className,
   mode,
+  dogFirstPerson,
   ready,
   onChange,
 }: {
   className: string;
   mode: ViewMode;
+  dogFirstPerson: boolean;
   ready: boolean;
   onChange: (mode: ViewMode) => void;
 }) {
-  const { t } = useCampusLocale();
+  const { t, locale } = useCampusLocale();
   return (
     <section className={`view-mode-switch ${className}`} aria-label={t('视角模式')}>
       <div className="view-mode-label">
@@ -1821,9 +1851,9 @@ function ViewModeSwitch({
           onClick={() => onChange('walk')}
         >
           <PersonStanding size={21} aria-hidden="true" />
-          <span>{t('第一视角')}</span>
-          <small>{t('步行探索校园')}</small>
-          <small className="mobile-usage-hint">{t('触控漫游')}</small>
+          <span>{dogFirstPerson ? (locale === 'en' ? 'Robot dog view' : '机器狗第一视角') : t('第一视角')}</span>
+          <small>{dogFirstPerson ? (locale === 'en' ? 'Patrol camera' : '跟随巡检镜头') : t('步行探索校园')}</small>
+          {!dogFirstPerson && <small className="mobile-usage-hint">{t('触控漫游')}</small>}
         </button>
       </div>
     </section>

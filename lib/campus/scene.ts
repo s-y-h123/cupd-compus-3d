@@ -621,7 +621,10 @@ export function createScene(
           -1.22,
           Math.min(1.22, walkPitch - dy * CUPB_CONFIG.walk.mouseSensitivity),
         );
-        syncWalkLook();
+        if (procedural?.roboDogState.firstPerson) {
+          cameraChanged = true;
+          dirty = true;
+        } else syncWalkLook();
       }
       return;
     }
@@ -1120,6 +1123,7 @@ export function createScene(
     dirty = true;
   }
   function stopWalk() {
+    if (procedural) procedural.roboDogState.firstPerson = false;
     if (viewMode !== 'walk') return;
     viewMode = 'overview';
     walkKeys.clear();
@@ -1148,6 +1152,8 @@ export function createScene(
       view('overview');
       return;
     }
+    // 从机器狗视角选择普通步行时，重新初始化人的出生点和相机参数。
+    if (procedural?.roboDogState.firstPerson) stopWalk();
     if (!initialReady || !baseRoot || viewMode === 'walk') return;
     setOrbit(false);
     tween = null;
@@ -2248,6 +2254,7 @@ export function createScene(
       setViewMode('overview');
       return;
     }
+    if (procedural?.roboDogState.firstPerson) return;
     if (!walkKeyCodes.has(e.code)) return;
     e.preventDefault();
     if (!walkKeys.has(e.code)) callbacks.onInteract();
@@ -2406,15 +2413,19 @@ export function createScene(
     if (!framePacer.shouldUpdate(time, modeSmooth)) return;
     const moving = viewMode === 'walk' ? false : controls.update();
     const walking = updateWalk(time);
-    if (procedural?.roboDogState.firstPerson && procedural.roboDog.children.length) {
-      camera.position.copy(procedural.roboDogState.position).add(new THREE.Vector3(0, .9, 0));
-      camera.quaternion.copy(procedural.roboDogState.quaternion);
-      controls.target.copy(camera.position).add(new THREE.Vector3(0, 0, -8).applyQuaternion(camera.quaternion));
-      cameraChanged = true;
-      dirty = true;
-    }
     if (procedural) {
       procedural.update(Math.min(.08, Math.max(0, (time - lastFrame) / 1000)), time, camera);
+      dirty = true;
+    }
+    if (procedural?.roboDogState.firstPerson && procedural.roboDog.children.length) {
+      // 相机固定在机身上方，避免转身时前置镜头探入路边建筑。
+      camera.position.copy(procedural.roboDogState.position).add(new THREE.Vector3(0, 1.15, 0));
+      camera.quaternion.copy(procedural.roboDogState.quaternion).multiply(
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(walkPitch, walkYaw, 0, 'YXZ')),
+      );
+      camera.getWorldDirection(walkForward);
+      controls.target.copy(camera.position).addScaledVector(walkForward, 8);
+      cameraChanged = true;
       dirty = true;
     }
     if (orbiting && !tween) {
@@ -2683,9 +2694,18 @@ export function createScene(
       return true;
     },
     setRoboDogFirstPerson: (on: boolean) => {
-      if (!procedural) return;
-      procedural.roboDogState.firstPerson = on;
-      if (on) setViewMode('walk');
+      if (!procedural?.roboDog.children.length) return;
+      if (!on) {
+        if (procedural.roboDogState.firstPerson) setViewMode('overview');
+        return;
+      }
+      if (viewMode !== 'walk') setViewMode('walk');
+      if (viewMode !== 'walk') return;
+      dogFollow = false;
+      walkYaw = 0;
+      walkPitch = -.04;
+      procedural.roboDogState.firstPerson = true;
+      canvas.setAttribute('aria-label', '中国石油大学（北京）机器狗第一视角，拖拽环顾，Home返回全景');
       dirty = true;
     },
     setRoboDogSpeed: (speed: number) => {
