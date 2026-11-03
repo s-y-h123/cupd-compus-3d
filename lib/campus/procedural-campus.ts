@@ -7,7 +7,7 @@ import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CUPB_CONFIG } from './cupb-config';
 import { buildPatrolRoute, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
 import { createRoboDogGait, type DogGait } from './robo-dog-gait';
-import { createRoboDogPaint } from './robo-dog-appearance';
+import { createRoboDogBeacon, createRoboDogPaint } from './robo-dog-appearance';
 
 export interface RoboDogState {
   position: THREE.Vector3;
@@ -460,6 +460,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   let patrolDistance = 0, inspectionTime = 0;
   let dogGait: DogGait | null = null;
   let dogPaint: ((hex: string) => void) | null = null;
+  let dogBeacon: ReturnType<typeof createRoboDogBeacon> | null = null;
   let dogColor = '#c5283e';
   const personGap = 1.45;
   const peopleNear = (x: number, z: number, radius: number) => {
@@ -607,6 +608,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
       dogColor = hex;
       dogPaint?.(hex);
+      dogBeacon?.setColor(hex);
     },
     // 道路只使用原校园 GLB 提取的路面；paths 仅供行人与机器狗导航。
     async loadOriginalRoads(modelUrl: string) {
@@ -757,6 +759,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       if (pedestrianCount) crowd.flush();
       advancePatrol(dt);
       dogGait?.update(dt, roboDogState.state);
+      dogBeacon?.update(camera, time, roboDogState.firstPerson);
       if (rain.visible) {
         for (let i = 0; i < 1600; i++) {
           const seed = i * 12.9898;
@@ -801,8 +804,10 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       dogGait = await createRoboDogGait(gltf, visual);
       dogPaint = createRoboDogPaint(visual);
       dogPaint(dogColor);
+      dogBeacon?.dispose();
       roboDog.clear();
       roboDog.add(visual);
+      dogBeacon = createRoboDogBeacon(roboDog, dogColor);
       robotLoaded = true;
       return visual;
     },
