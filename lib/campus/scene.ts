@@ -2743,6 +2743,11 @@ export function createScene(
       if (started) dirty = true;
       return started;
     },
+    startCoordinatedPatrol: () => {
+      const result = procedural?.startCoordinatedPatrol() ?? { assignments: [], unavailableDogs: [1] };
+      if (result.assignments.length) dirty = true;
+      return result;
+    },
     pauseRoboDogPatrol: () => { procedural?.pauseRoboDogPatrol(); dirty = true; },
     resumeRoboDogPatrol: () => { procedural?.resumeRoboDogPatrol(); dirty = true; },
     stopRoboDogPatrol: () => { procedural?.stopRoboDogPatrol(); dirty = true; },

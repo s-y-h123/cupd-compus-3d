@@ -832,6 +832,14 @@ function CampusMap() {
           setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
         }}
         onStopAdditionalDog={id => { controller.current?.stopAdditionalDogPatrol(id); setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []); }}
+        onCoordinateFleet={() => {
+          const result = controller.current?.startCoordinatedPatrol() ?? { assignments: [], unavailableDogs: [1] };
+          setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol);
+          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
+          if (!result.assignments.length) notify(locale === 'en' ? 'No patrol route can start safely right now.' : '当前没有可安全启动的巡检路线', true);
+          else if (result.unavailableDogs.length) notify(locale === 'en' ? `${result.assignments.length} dogs started; some starting points are occupied.` : `已启动 ${result.assignments.length} 只机器狗，部分起点暂被占用`);
+          return result;
+        }}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
         onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
         onFocusDog={() => controller.current?.focusRoboDog()}

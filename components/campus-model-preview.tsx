@@ -10,7 +10,7 @@ import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-do
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, additionalDogs, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog, onAddDog, onRemoveDog, onStartAdditionalDog, onStopAdditionalDog }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, additionalDogs, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog, onAddDog, onRemoveDog, onStartAdditionalDog, onStopAdditionalDog, onCoordinateFleet }: {
   locale: Locale;
   count: number;
   speed: number;
@@ -40,6 +40,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   onRemoveDog: (id: number) => void;
   onStartAdditionalDog: (id: number, routeId: string) => void;
   onStopAdditionalDog: (id: number) => void;
+  onCoordinateFleet: () => { assignments: { dogId: number; routeId: string }[]; unavailableDogs: number[] };
 }) {
   const [tab, setTab] = useState<ModelTab | null>(null);
   const [selectedPatrol, setSelectedPatrol] = useState(patrolRoutes[0]?.id ?? '');
@@ -53,6 +54,11 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   const paintRef = useRef<((hex: string) => void) | null>(null);
   useEffect(() => { dogColorRef.current = dogColor; paintRef.current?.(dogColor); }, [dogColor]);
   const en = locale === 'en';
+  const assignedDogs = [{ id: 1, ...dogPatrol }, ...additionalDogs].filter(dog => dog.routeId);
+  const fleetDistance = assignedDogs.reduce((sum, dog) => sum + dog.distance, 0);
+  const fleetTotal = assignedDogs.reduce((sum, dog) => sum + dog.total, 0);
+  const distinctRoutes = new Set(assignedDogs.map(dog => dog.routeId)).size;
+  const fleetDetours = assignedDogs.reduce((sum, dog) => sum + (dog.detours ?? 0), 0);
 
   useEffect(() => {
     if (tab !== 'person' || !host.current) return;
@@ -297,7 +303,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                     <button type="button" onClick={onStopPatrol} disabled={!dogPatrol.routeId}>{en ? 'Stop' : '结束'}</button>
                   </div>
                   {dogPatrol.routeId && <output className="dog-patrol-progress">
-                    <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding to walkers' : '礼让行人', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}</span>
+                    <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding to walkers' : '礼让行人', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}{dogPatrol.detours ? ` · ${en ? 'Detours' : '绕行'} ${dogPatrol.detours}` : ''}</span>
                     <progress max={Math.max(1, dogPatrol.total)} value={dogPatrol.distance} />
                     <small>{Math.round(dogPatrol.distance)} / {Math.round(dogPatrol.total)} m</small>
                   </output>}
@@ -305,6 +311,17 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                     <strong>{en ? 'Patrol dogs' : '巡检机器狗'} · {additionalDogs.length + 1}/4</strong>
                     <button type="button" onClick={onAddDog} disabled={additionalDogs.length >= 3}>{en ? 'Add dog' : '增加机器狗'}</button>
                   </div>
+                  <button type="button" className="dog-dispatch-button" onClick={() => {
+                    const result = onCoordinateFleet();
+                    const primary = result.assignments.find(item => item.dogId === 1);
+                    if (primary) setSelectedPatrol(primary.routeId);
+                    setExtraRoutes(current => ({ ...current, ...Object.fromEntries(result.assignments.filter(item => item.dogId !== 1).map(item => [item.dogId, item.routeId])) }));
+                  }}>{en ? 'Assign different routes and start' : '分配不同路线并开始'}</button>
+                  {assignedDogs.length > 0 && <output className="dog-fleet-summary">
+                    <span>{en ? `${assignedDogs.length} dogs · ${distinctRoutes} routes` : `${assignedDogs.length} 只机器狗 · ${distinctRoutes} 条路线`}</span>
+                    <progress max={Math.max(1, fleetTotal)} value={fleetDistance} />
+                    <small>{en ? 'Patrolled / planned' : '已走 / 计划'} {Math.round(fleetDistance)} / {Math.round(fleetTotal)} m{fleetDetours ? ` · ${en ? 'Detours' : '绕行'} ${fleetDetours}` : ''}</small>
+                  </output>}
                   <div className="dog-trail-note">{en ? 'Colored marks show the road each dog has already covered.' : '路面彩色标记随机器狗行进逐段出现。'}</div>
                   {additionalDogs.map(dog => {
                     const routeId = extraRoutes[dog.id] ?? patrolRoutes[(dog.id - 1) % patrolRoutes.length]?.id ?? '';
@@ -315,7 +332,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                         {patrolRoutes.map(route => <option key={route.id} value={route.id}>{en ? route.nameEn : route.name}</option>)}
                       </select>
                       <div className="dog-patrol-actions"><button type="button" onClick={() => onStartAdditionalDog(dog.id, routeId)}>{en ? 'Start patrol' : '开始巡检'}</button><button type="button" onClick={() => onStopAdditionalDog(dog.id)} disabled={!dog.routeId}>{en ? 'Stop' : '结束'}</button></div>
-                      {dog.routeId && <output className="dog-patrol-progress"><span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding' : '礼让中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dog.status]} · {dog.checkpoint}</span><progress max={Math.max(1, dog.total)} value={dog.distance} /></output>}
+                      {dog.routeId && <output className="dog-patrol-progress"><span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding' : '礼让中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dog.status]} · {dog.checkpoint}{dog.detours ? ` · ${en ? 'Detours' : '绕行'} ${dog.detours}` : ''}</span><progress max={Math.max(1, dog.total)} value={dog.distance} /></output>}
                     </div>;
                   })}
                 </div>

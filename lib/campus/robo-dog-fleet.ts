@@ -3,7 +3,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { createRoboDogBeacon, createRoboDogPaint } from './robo-dog-appearance';
-import type { PatrolRoute, PatrolSnapshot, PatrolStatus } from './robo-dog-patrol';
+import { clonePatrolRoute, findPatrolDetour, refreshPatrolRouteLength, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
 
 /** 巡检轨迹只在实际走过的路面盖章；InstancedMesh 避免逐点创建网格。 */
 export function createRoboDogTrail(roadGroup: THREE.Group, color: string) {
@@ -69,6 +69,7 @@ type FleetDog = {
   point: number;
   distance: number;
   stopTime: number;
+  detours: number;
   trail: ReturnType<typeof createRoboDogTrail>;
   beacon: ReturnType<typeof createRoboDogBeacon>;
   gait: (dt: number, motion: 'idle' | 'walking' | 'turning') => void;
@@ -94,13 +95,14 @@ function cloneGait(visual: THREE.Object3D) {
   };
 }
 
-export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, speed, collides, peopleNear }: {
+export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, speed, collides, nearRoad, peopleNear }: {
   baseGroup: THREE.Group;
   roadGroup: THREE.Group;
   routes: Map<string, PatrolRoute>;
   primary: THREE.Group;
   speed: () => number;
   collides: (x: number, z: number) => boolean;
+  nearRoad: (x: number, z: number) => boolean;
   peopleNear: (x: number, z: number, radius: number) => boolean;
 }) {
   const dogs = new Map<number, FleetDog>();
@@ -121,6 +123,7 @@ export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, spee
     checkpointCount: dog.route?.checkpoints.length ?? 0,
     distance: dog.distance,
     total: dog.route?.length ?? 0,
+    detours: dog.detours,
   });
   return {
     setTemplate(visual: THREE.Object3D) { template = visual; },
@@ -128,11 +131,14 @@ export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, spee
     tooClose,
     add() {
       if (!template || dogs.size >= 3) return null;
-      const id = nextId++;
+      const id = nextId;
       const color = colors[(id - 2) % colors.length];
-      const route = [...routes.values()][(id - 2) % routes.size];
-      const point = route?.legs[0].points.find(([x, z]) => !collides(x, z) && !tooClose(x, z) && !peopleNear(x, z, 1.45));
+      const ordered = [...routes.values()];
+      const point = [...ordered.slice((id - 2) % ordered.length), ...ordered.slice(0, (id - 2) % ordered.length)]
+        .flatMap(route => route.legs[0].points)
+        .find(([x, z]) => !collides(x, z) && !tooClose(x, z) && !peopleNear(x, z, 1.45));
       if (!point) return null;
+      nextId++;
       const visual = template.clone(true);
       const materials = new Set<THREE.Material>();
       visual.traverse(object => {
@@ -154,7 +160,7 @@ export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, spee
       baseGroup.add(root);
       const beacon = createRoboDogBeacon(root, color);
       const trail = createRoboDogTrail(roadGroup, color);
-      dogs.set(id, { id, root, route: null, status: 'idle', leg: 0, point: 1, distance: 0, stopTime: 0, trail, beacon, gait: cloneGait(visual), materials });
+      dogs.set(id, { id, root, route: null, status: 'idle', leg: 0, point: 1, distance: 0, stopTime: 0, detours: 0, trail, beacon, gait: cloneGait(visual), materials });
       return id;
     },
     remove(id: number) {
@@ -170,10 +176,11 @@ export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, spee
       const first = route.legs[0].points;
       const index = first.findIndex(([x, z], i) => i < first.length - 1 && !collides(x, z) && !peopleNear(x, z, 1.8) && !tooClose(x, z, id));
       if (index < 0) return false;
-      dog.route = route; dog.leg = 0; dog.point = index + 1;
+      dog.route = clonePatrolRoute(route); dog.leg = 0; dog.point = 1;
+      dog.route.legs[0].points = dog.route.legs[0].points.slice(index);
+      refreshPatrolRouteLength(dog.route);
       dog.distance = 0;
-      for (let i = 1; i <= index; i++) dog.distance += Math.hypot(first[i][0] - first[i-1][0], first[i][1] - first[i-1][1]);
-      dog.stopTime = 0; dog.status = 'turning';
+      dog.stopTime = 0; dog.detours = 0; dog.status = 'turning';
       dog.root.position.set(first[index][0], 0, first[index][1]);
       dog.trail.reset(dog.root.position.x, dog.root.position.z);
       return true;
@@ -208,7 +215,17 @@ export function createRoboDogFleet({ baseGroup, roadGroup, routes, primary, spee
               } else {
                 const step = Math.min(distance, speed() * dt);
                 const nx = dog.root.position.x + direction.x * step, nz = dog.root.position.z + direction.z * step;
-                if (collides(nx, nz)) dog.status = 'blocked';
+                if (collides(nx, nz)) {
+                  const detour = dog.detours < 3 && findPatrolDetour(
+                    [dog.root.position.x, dog.root.position.z], leg.points, dog.point,
+                    (x, z) => !collides(x, z) && nearRoad(x, z));
+                  if (detour) {
+                    leg.points.splice(dog.point, detour.rejoinIndex - dog.point + 1, ...detour.waypoints);
+                    refreshPatrolRouteLength(route);
+                    dog.detours++;
+                    dog.status = 'turning';
+                  } else dog.status = 'blocked';
+                }
                 else if (peopleNear(nx, nz, 1.45) || tooClose(nx, nz, dog.id)) dog.status = 'yielding';
                 else {
                   dog.root.position.set(nx, 0, nz);

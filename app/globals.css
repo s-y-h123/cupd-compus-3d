@@ -2483,6 +2483,13 @@ kbd {
 .dog-fleet-head { border-top: 1px solid var(--line); padding-top: 12px; }
 .dog-fleet-head button, .dog-fleet-card-head button { min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--accent-text); font: inherit; font-weight: 700; cursor: pointer; }
 .dog-fleet-head button:disabled { opacity: .45; cursor: default; }
+.dog-dispatch-button { min-height: 44px; width: 100%; padding: 8px 12px; border: 1px solid var(--accent-solid); border-radius: 9px; background: var(--accent-solid); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.dog-dispatch-button:hover { filter: brightness(.94); }
+.dog-dispatch-button:focus-visible { outline: 2px solid var(--accent-solid); outline-offset: 2px; }
+.dog-fleet-summary { display: grid; gap: 5px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-subtle, #f7f8f8); color: var(--text-2); font-size: 12px; }
+.dog-fleet-summary span { color: var(--text-1); font-weight: 700; }
+.dog-fleet-summary progress { width: 100%; height: 7px; accent-color: var(--accent-solid); }
+.dog-fleet-summary small { font-size: 11px; font-variant-numeric: tabular-nums; }
 .dog-trail-note { color: var(--text-2); font-size: 11px; line-height: 1.5; }
 .dog-fleet-card { display: grid; gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 .dog-fleet-card-head strong { color: var(--text-1); }

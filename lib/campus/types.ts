@@ -151,6 +151,7 @@ export interface SceneController {
   moveRoboDog: (dt: number, direction: [number, number, number]) => void;
   getRoboDogState: () => { position: [number, number, number]; quaternion: [number, number, number, number]; speed: number; state: 'idle' | 'walking' | 'turning'; firstPerson: boolean };
   startRoboDogPatrol: (id: string) => boolean;
+  startCoordinatedPatrol: () => { assignments: { dogId: number; routeId: string }[]; unavailableDogs: number[] };
   pauseRoboDogPatrol: () => void;
   resumeRoboDogPatrol: () => void;
   stopRoboDogPatrol: () => void;

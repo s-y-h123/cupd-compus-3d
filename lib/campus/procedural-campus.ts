@@ -5,7 +5,7 @@ import { createPedestrianCrowd } from './pedestrian-crowd';
 import { treeAppearance, treeRotation } from './vegetation';
 import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CUPB_CONFIG } from './cupb-config';
-import { buildPatrolRoute, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
+import { buildPatrolRoute, clonePatrolRoute, findPatrolDetour, planDistinctPatrolRoutes, refreshPatrolRouteLength, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
 import { createRoboDogGait, type DogGait } from './robo-dog-gait';
 import { createRoboDogBeacon, createRoboDogPaint } from './robo-dog-appearance';
 import { createRoboDogFleet, createRoboDogTrail } from './robo-dog-fleet';
@@ -458,7 +458,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   }));
   let activePatrol: PatrolRoute | null = null;
   let patrolStatus: PatrolStatus = 'idle', patrolLeg = 0, patrolPoint = 1;
-  let patrolDistance = 0, inspectionTime = 0;
+  let patrolDistance = 0, inspectionTime = 0, primaryDetours = 0;
   let dogGait: DogGait | null = null;
   let dogPaint: ((hex: string) => void) | null = null;
   let dogBeacon: ReturnType<typeof createRoboDogBeacon> | null = null;
@@ -472,7 +472,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
     return closest < radius;
   };
   const fleet = createRoboDogFleet({ baseGroup, roadGroup, routes: patrolRoutes, primary: roboDog,
-    speed: () => roboDogState.speed, collides: collidesPatrol, peopleNear });
+    speed: () => roboDogState.speed, collides: collidesPatrol, nearRoad, peopleNear });
   const separateWalker = (walker: Walker, index: number, preferred: { x: number; z: number; heading: number }) => {
     const robots = robotLoaded ? [roboDog.position, ...fleet.positions()] : [];
     const nearest = robots.reduce<THREE.Vector3 | null>((best, dog) =>
@@ -502,6 +502,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
     checkpointCount: activePatrol?.checkpoints.length ?? 0,
     distance: patrolDistance,
     total: activePatrol?.length ?? 0,
+    detours: primaryDetours,
   });
   const advancePatrol = (dt: number) => {
     if (!activePatrol || patrolStatus === 'idle' || patrolStatus === 'paused' || patrolStatus === 'blocked' || patrolStatus === 'completed') return;
@@ -539,8 +540,19 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       const nextZ = roboDog.position.z + direction.z * step;
       // 行人路网已经限定可行走位置；建筑碰撞按真实轮廓，不能用包围盒封死庭院和楼前路。
       if (collidesPatrol(nextX, nextZ)) {
-        patrolStatus = 'blocked';
-        roboDogState.state = 'idle';
+        const detour = primaryDetours < 3 && findPatrolDetour(
+          [roboDog.position.x, roboDog.position.z], leg.points, patrolPoint,
+          (x, z) => !collidesPatrol(x, z) && nearRoad(x, z));
+        if (detour) {
+          leg.points.splice(patrolPoint, detour.rejoinIndex - patrolPoint + 1, ...detour.waypoints);
+          refreshPatrolRouteLength(activePatrol);
+          primaryDetours++;
+          patrolStatus = 'turning';
+          roboDogState.state = 'turning';
+        } else {
+          patrolStatus = 'blocked';
+          roboDogState.state = 'idle';
+        }
         return;
       }
       // 行人优先：进入安全距离就原地等待，下一帧自动重试，不将行人当作永久路障。
@@ -569,6 +581,31 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   let timeOfDay: Preset = 'day';
   let rainStrength = 0, nightStrength = 0;
   let robotLoaded = false;
+  const startPrimaryPatrol = (id: string) => {
+    const source = patrolRoutes.get(id);
+    if (!robotLoaded || !source) return false;
+    const first = source.legs[0].points;
+    let startIndex = -1;
+    for (let i = 0; i < first.length - 1; i++) {
+      if (!peopleNear(first[i][0], first[i][1], personGap * 1.6) && !collidesPatrol(first[i][0], first[i][1]) && !fleet.positions().some(dog => Math.hypot(first[i][0] - dog.x, first[i][1] - dog.z) < 1.7)) { startIndex = i; break; }
+    }
+    if (startIndex < 0) return false;
+    activePatrol = clonePatrolRoute(source);
+    activePatrol.legs[0].points = activePatrol.legs[0].points.slice(startIndex);
+    refreshPatrolRouteLength(activePatrol);
+    patrolLeg = 0;
+    patrolPoint = 1;
+    patrolDistance = 0;
+    inspectionTime = 0;
+    primaryDetours = 0;
+    patrolStatus = 'turning';
+    const [x, z] = first[startIndex];
+    roboDog.position.set(x, 0, z);
+    primaryTrail.reset(x, z);
+    roboDogState.position.copy(roboDog.position);
+    roboDogState.state = 'turning';
+    return true;
+  };
   return {
     root: baseGroup, buildingsGroup, roadGroup, greenGroup, pedestrianGroup, roboDog, weatherGroup, lightGroup,
     fountainGroup: site.fountainGroup, wallGroup: site.wallGroup, gateGroup: site.gateGroup,
@@ -577,28 +614,22 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
     setPedestrianSpeed: (speed: number) => { pedestrianSpeed = Math.max(0, Math.min(3, speed)); },
     setPedestrianRoutesVisible: (visible: boolean) => { routeMarkers.visible = visible; },
     roboDogState,
-    startRoboDogPatrol(id: string) {
-      const route = patrolRoutes.get(id);
-      if (!robotLoaded || !route) return false;
-      const first = route.legs[0].points;
-      let startIndex = -1;
-      for (let i = 0; i < first.length - 1; i++) {
-        if (!peopleNear(first[i][0], first[i][1], personGap * 1.6) && !collidesPatrol(first[i][0], first[i][1]) && !fleet.positions().some(dog => Math.hypot(first[i][0] - dog.x, first[i][1] - dog.z) < 1.7)) { startIndex = i; break; }
-      }
-      if (startIndex < 0) return false;
-      activePatrol = route;
-      patrolLeg = 0;
-      patrolPoint = startIndex + 1;
-      patrolDistance = 0;
-      for (let i = 1; i <= startIndex; i++) patrolDistance += Math.hypot(first[i][0] - first[i - 1][0], first[i][1] - first[i - 1][1]);
-      inspectionTime = 0;
-      patrolStatus = 'turning';
-      const [x, z] = first[startIndex];
-      roboDog.position.set(x, 0, z);
-      primaryTrail.reset(x, z);
-      roboDogState.position.copy(roboDog.position);
-      roboDogState.state = 'turning';
-      return true;
+    startRoboDogPatrol: startPrimaryPatrol,
+    startCoordinatedPatrol() {
+      if (!robotLoaded) return { assignments: [] as { dogId: number; routeId: string }[], unavailableDogs: [1] };
+      while (fleet.states().length < 3 && fleet.add() !== null) { /* 补足可安全投放的机器狗 */ }
+      const ids = [1, ...fleet.states().map(dog => dog.id)];
+      const preferred = planDistinctPatrolRoutes([...patrolRoutes.values()], ids.length);
+      const used = new Set<string>();
+      const assignments: { dogId: number; routeId: string }[] = [];
+      const unavailableDogs: number[] = [];
+      ids.forEach((dogId, index) => {
+        const candidates = [preferred[index], ...patrolRoutes.keys()].filter((id): id is string => !!id && !used.has(id));
+        const routeId = candidates.find(id => dogId === 1 ? startPrimaryPatrol(id) : fleet.start(dogId, id));
+        if (routeId) { used.add(routeId); assignments.push({ dogId, routeId }); }
+        else unavailableDogs.push(dogId);
+      });
+      return { assignments, unavailableDogs };
     },
     pauseRoboDogPatrol() {
       if (activePatrol && !['completed', 'blocked'].includes(patrolStatus)) {
