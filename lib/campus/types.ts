@@ -155,6 +155,11 @@ export interface SceneController {
   resumeRoboDogPatrol: () => void;
   stopRoboDogPatrol: () => void;
   getRoboDogPatrolState: () => PatrolSnapshot;
+  addRoboDog: () => number | null;
+  removeRoboDog: (id: number) => void;
+  startAdditionalDogPatrol: (id: number, routeId: string) => boolean;
+  stopAdditionalDogPatrol: (id: number) => void;
+  getAdditionalDogPatrolStates: () => (PatrolSnapshot & { id: number })[];
   setQuality: (q: Quality) => void;
   setViewMode: (mode: ViewMode) => void;
   /** Touch/onscreen movement: forward +1 is ahead, side +1 is right. */

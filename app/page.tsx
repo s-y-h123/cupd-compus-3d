@@ -223,6 +223,7 @@ function CampusMap() {
     routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
     checkpointCount: 0, distance: 0, total: 0,
   });
+  const [additionalDogs, setAdditionalDogs] = useState<(PatrolSnapshot & { id: number })[]>([]);
   const loadDog = useCallback((c: SceneController) => {
     const id = ++dogLoadId.current;
     setDogStatus('loading');
@@ -248,10 +249,13 @@ function CampusMap() {
   }, [dogStatus, dogSpeed, dogColor]);
   useEffect(() => {
     if (dogStatus !== 'ready') return;
-    const refresh = () => setDogPatrol(controller.current?.getRoboDogPatrolState() ?? {
-      routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
-      checkpointCount: 0, distance: 0, total: 0,
-    });
+    const refresh = () => {
+      setDogPatrol(controller.current?.getRoboDogPatrolState() ?? {
+        routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
+        checkpointCount: 0, distance: 0, total: 0,
+      });
+      setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
+    };
     refresh();
     const timer = window.setInterval(refresh, 250);
     return () => window.clearInterval(timer);
@@ -814,6 +818,20 @@ function CampusMap() {
         onRetryDog={() => { if (controller.current) loadDog(controller.current); }}
         dogSpeed={dogSpeed} dogColor={dogColor} dogFirstPerson={dogFirstPerson}
         dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
+        additionalDogs={additionalDogs}
+        onAddDog={() => {
+          const id = controller.current?.addRoboDog() ?? null;
+          if (id === null) notify(locale === 'en' ? 'No safe place to add a dog. Try again shortly.' : '当前没有安全的投放位置，请稍后重试', true);
+          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
+          return id;
+        }}
+        onRemoveDog={id => { controller.current?.removeRoboDog(id); setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []); }}
+        onStartAdditionalDog={(id, routeId) => {
+          if (!controller.current?.startAdditionalDogPatrol(id, routeId))
+            notify(locale === 'en' ? 'Patrol start is crowded. Try again shortly.' : '巡检起点人流密集，请稍后重试', true);
+          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
+        }}
+        onStopAdditionalDog={id => { controller.current?.stopAdditionalDogPatrol(id); setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []); }}
         showRoutes={pedestrianRoutesVisible} onCountChange={setPedestrianCount}
         onSpeedChange={setPedestrianSpeed} onRoutesChange={setPedestrianRoutesVisible}
         onFocusDog={() => controller.current?.focusRoboDog()}

@@ -10,7 +10,7 @@ import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-do
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog }: {
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, additionalDogs, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog, onAddDog, onRemoveDog, onStartAdditionalDog, onStopAdditionalDog }: {
   locale: Locale;
   count: number;
   speed: number;
@@ -23,6 +23,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   dogFirstPerson: boolean;
   dogPatrol: PatrolSnapshot;
   patrolRoutes: PatrolRouteDefinition[];
+  additionalDogs: (PatrolSnapshot & { id: number })[];
   onCountChange: (count: number) => void;
   onSpeedChange: (speed: number) => void;
   onRoutesChange: (show: boolean) => void;
@@ -35,9 +36,14 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   onResumePatrol: () => void;
   onStopPatrol: () => void;
   onRetryDog: () => void;
+  onAddDog: () => number | null;
+  onRemoveDog: (id: number) => void;
+  onStartAdditionalDog: (id: number, routeId: string) => void;
+  onStopAdditionalDog: (id: number) => void;
 }) {
   const [tab, setTab] = useState<ModelTab | null>(null);
   const [selectedPatrol, setSelectedPatrol] = useState(patrolRoutes[0]?.id ?? '');
+  const [extraRoutes, setExtraRoutes] = useState<Record<number, string>>({});
   const host = useRef<HTMLDivElement>(null);
   const [dogPreviewError, setDogPreviewError] = useState(false);
   const [dogPreviewLoading, setDogPreviewLoading] = useState(false);
@@ -295,6 +301,23 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                     <progress max={Math.max(1, dogPatrol.total)} value={dogPatrol.distance} />
                     <small>{Math.round(dogPatrol.distance)} / {Math.round(dogPatrol.total)} m</small>
                   </output>}
+                  <div className="dog-fleet-head">
+                    <strong>{en ? 'Patrol dogs' : '巡检机器狗'} · {additionalDogs.length + 1}/4</strong>
+                    <button type="button" onClick={onAddDog} disabled={additionalDogs.length >= 3}>{en ? 'Add dog' : '增加机器狗'}</button>
+                  </div>
+                  <div className="dog-trail-note">{en ? 'Colored marks show the road each dog has already covered.' : '路面彩色标记随机器狗行进逐段出现。'}</div>
+                  {additionalDogs.map(dog => {
+                    const routeId = extraRoutes[dog.id] ?? patrolRoutes[(dog.id - 1) % patrolRoutes.length]?.id ?? '';
+                    return <div className="dog-fleet-card" key={dog.id}>
+                      <div className="dog-fleet-card-head"><strong>{en ? `Robot dog ${dog.id}` : `机器狗${dog.id}`}</strong><button type="button" onClick={() => onRemoveDog(dog.id)} aria-label={en ? `Remove robot dog ${dog.id}` : `移除机器狗${dog.id}`}>{en ? 'Remove' : '移除'}</button></div>
+                      <label htmlFor={`dog-route-${dog.id}`}>{en ? 'Patrol route' : '巡检路线'}</label>
+                      <select id={`dog-route-${dog.id}`} value={routeId} onChange={event => setExtraRoutes(current => ({ ...current, [dog.id]: event.target.value }))}>
+                        {patrolRoutes.map(route => <option key={route.id} value={route.id}>{en ? route.nameEn : route.name}</option>)}
+                      </select>
+                      <div className="dog-patrol-actions"><button type="button" onClick={() => onStartAdditionalDog(dog.id, routeId)}>{en ? 'Start patrol' : '开始巡检'}</button><button type="button" onClick={() => onStopAdditionalDog(dog.id)} disabled={!dog.routeId}>{en ? 'Stop' : '结束'}</button></div>
+                      {dog.routeId && <output className="dog-patrol-progress"><span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding' : '礼让中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dog.status]} · {dog.checkpoint}</span><progress max={Math.max(1, dog.total)} value={dog.distance} /></output>}
+                    </div>;
+                  })}
                 </div>
               </>}
             </>}

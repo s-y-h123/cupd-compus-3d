@@ -8,6 +8,7 @@ import { CUPB_CONFIG } from './cupb-config';
 import { buildPatrolRoute, type PatrolRoute, type PatrolSnapshot, type PatrolStatus } from './robo-dog-patrol';
 import { createRoboDogGait, type DogGait } from './robo-dog-gait';
 import { createRoboDogBeacon, createRoboDogPaint } from './robo-dog-appearance';
+import { createRoboDogFleet, createRoboDogTrail } from './robo-dog-fleet';
 
 export interface RoboDogState {
   position: THREE.Vector3;
@@ -462,6 +463,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
   let dogPaint: ((hex: string) => void) | null = null;
   let dogBeacon: ReturnType<typeof createRoboDogBeacon> | null = null;
   let dogColor = '#c5283e';
+  const primaryTrail = createRoboDogTrail(roadGroup, dogColor);
   const personGap = 1.45;
   const peopleNear = (x: number, z: number, radius: number) => {
     let closest = Infinity;
@@ -469,17 +471,23 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       closest = Math.min(closest, Math.hypot(x - walkers[i].x, z - walkers[i].z));
     return closest < radius;
   };
+  const fleet = createRoboDogFleet({ baseGroup, roadGroup, routes: patrolRoutes, primary: roboDog,
+    speed: () => roboDogState.speed, collides: collidesPatrol, peopleNear });
   const separateWalker = (walker: Walker, index: number, preferred: { x: number; z: number; heading: number }) => {
-    if (!robotLoaded || Math.hypot(preferred.x - roboDog.position.x, preferred.z - roboDog.position.z) >= personGap) return preferred;
+    const robots = robotLoaded ? [roboDog.position, ...fleet.positions()] : [];
+    const nearest = robots.reduce<THREE.Vector3 | null>((best, dog) =>
+      Math.hypot(preferred.x - dog.x, preferred.z - dog.z) < Math.hypot(preferred.x - (best?.x ?? Infinity), preferred.z - (best?.z ?? Infinity)) ? dog : best, null);
+    if (!nearest || Math.hypot(preferred.x - nearest.x, preferred.z - nearest.z) >= personGap) return preferred;
     // 正常相遇时先停步等待横向避让，避免行人瞬间跳到机器狗另一侧。
-    if (Math.hypot(walker.x - roboDog.position.x, walker.z - roboDog.position.z) >= personGap)
+    if (Math.hypot(walker.x - nearest.x, walker.z - nearest.z) >= personGap)
       return { x: walker.x, z: walker.z, heading: walker.heading };
     let best: typeof preferred | null = null, bestDistance = Infinity;
     for (let k = 0; k < 16; k++) {
       const angle = k * Math.PI / 8;
-      const x = roboDog.position.x + Math.cos(angle) * (personGap + .08);
-      const z = roboDog.position.z + Math.sin(angle) * (personGap + .08);
+      const x = nearest.x + Math.cos(angle) * (personGap + .08);
+      const z = nearest.z + Math.sin(angle) * (personGap + .08);
       if (collidesPatrol(x, z)) continue;
+      if (robots.some(dog => dog !== nearest && Math.hypot(x - dog.x, z - dog.z) < personGap)) continue;
       if (walkers.some((other, j) => j !== index && j < pedestrianCount && Math.hypot(x - other.x, z - other.z) < .8)) continue;
       const distance = Math.hypot(x - preferred.x, z - preferred.z);
       if (distance < bestDistance) { best = { x, z, heading: preferred.heading }; bestDistance = distance; }
@@ -536,12 +544,13 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
         return;
       }
       // 行人优先：进入安全距离就原地等待，下一帧自动重试，不将行人当作永久路障。
-      if (peopleNear(nextX, nextZ, personGap)) {
+      if (peopleNear(nextX, nextZ, personGap) || fleet.positions().some(dog => Math.hypot(nextX - dog.x, nextZ - dog.z) < 1.7)) {
         patrolStatus = 'yielding';
         roboDogState.state = 'idle';
         return;
       }
       roboDog.position.set(nextX, roboDog.position.y, nextZ);
+      primaryTrail.mark(nextX, nextZ);
       roboDogState.position.copy(roboDog.position);
       roboDogState.quaternion.copy(heading);
       roboDog.quaternion.copy(heading);
@@ -574,7 +583,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       const first = route.legs[0].points;
       let startIndex = -1;
       for (let i = 0; i < first.length - 1; i++) {
-        if (!peopleNear(first[i][0], first[i][1], personGap * 1.6) && !collidesPatrol(first[i][0], first[i][1])) { startIndex = i; break; }
+        if (!peopleNear(first[i][0], first[i][1], personGap * 1.6) && !collidesPatrol(first[i][0], first[i][1]) && !fleet.positions().some(dog => Math.hypot(first[i][0] - dog.x, first[i][1] - dog.z) < 1.7)) { startIndex = i; break; }
       }
       if (startIndex < 0) return false;
       activePatrol = route;
@@ -586,6 +595,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       patrolStatus = 'turning';
       const [x, z] = first[startIndex];
       roboDog.position.set(x, 0, z);
+      primaryTrail.reset(x, z);
       roboDogState.position.copy(roboDog.position);
       roboDogState.state = 'turning';
       return true;
@@ -604,11 +614,17 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
     },
     stopRoboDogPatrol() { activePatrol = null; patrolStatus = 'idle'; roboDogState.state = 'idle'; },
     getRoboDogPatrolState: getPatrolState,
+    addRoboDog: () => fleet.add(),
+    removeRoboDog: (id: number) => fleet.remove(id),
+    startAdditionalDogPatrol: (id: number, routeId: string) => fleet.start(id, routeId),
+    stopAdditionalDogPatrol: (id: number) => fleet.stop(id),
+    getAdditionalDogPatrolStates: () => fleet.states(),
     setRoboDogColor(hex: string) {
       if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
       dogColor = hex;
       dogPaint?.(hex);
       dogBeacon?.setColor(hex);
+      primaryTrail.setColor(hex);
     },
     // 道路只使用原校园 GLB 提取的路面；paths 仅供行人与机器狗导航。
     async loadOriginalRoads(modelUrl: string) {
@@ -758,6 +774,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       }
       if (pedestrianCount) crowd.flush();
       advancePatrol(dt);
+      fleet.update(dt, camera, time);
       dogGait?.update(dt, roboDogState.state);
       dogBeacon?.update(camera, time, roboDogState.firstPerson);
       if (rain.visible) {
@@ -810,6 +827,7 @@ export function createProceduralCampus(buildings: Building[], landmarks: Landmar
       dogBeacon?.dispose();
       roboDog.clear();
       roboDog.add(visual);
+      fleet.setTemplate(visual);
       dogBeacon = createRoboDogBeacon(roboDog, dogColor);
       robotLoaded = true;
       return visual;
