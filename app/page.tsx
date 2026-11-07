@@ -93,7 +93,6 @@ import { decodeShare, encodeShare, cameraBearing } from '@/lib/campus/share';
 import { fetchJson } from '@/lib/campus/streaming';
 import { asset, prefetchBase } from '@/lib/campus/boot';
 import { CUPB_CONFIG } from '@/lib/campus/cupb-config';
-import type { PatrolSnapshot } from '@/lib/campus/robo-dog-patrol';
 import { createCameraStore, type CameraStore } from '@/lib/campus/camera-store';
 import { CampusMinimap } from '@/components/campus-minimap';
 import { CampusViewControls } from '@/components/campus-view-controls';
@@ -219,11 +218,14 @@ function CampusMap() {
   const [dogSpeed, setDogSpeed] = useState(1.2);
   const [dogColor, setDogColor] = useState('#c5283e');
   const [dogFirstPerson, setDogFirstPerson] = useState(false);
-  const [dogPatrol, setDogPatrol] = useState<PatrolSnapshot>({
-    routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
-    checkpointCount: 0, distance: 0, total: 0,
-  });
-  const [additionalDogs, setAdditionalDogs] = useState<(PatrolSnapshot & { id: number })[]>([]);
+  // 巡检进度由机器狗面板自行刷新，避免每 250 毫秒重绘整张校园页面。
+  const getPatrolSnapshots = useCallback(() => ({
+    primary: controller.current?.getRoboDogPatrolState() ?? {
+      routeId: null, status: 'idle' as const, checkpoint: null, checkpointIndex: 0,
+      checkpointCount: 0, distance: 0, total: 0,
+    },
+    additional: controller.current?.getAdditionalDogPatrolStates() ?? [],
+  }), []);
   const loadDog = useCallback((c: SceneController) => {
     const id = ++dogLoadId.current;
     setDogStatus('loading');
@@ -247,19 +249,6 @@ function CampusMap() {
     controller.current?.setRoboDogSpeed(dogSpeed);
     controller.current?.setRoboDogColor(dogColor);
   }, [dogStatus, dogSpeed, dogColor]);
-  useEffect(() => {
-    if (dogStatus !== 'ready') return;
-    const refresh = () => {
-      setDogPatrol(controller.current?.getRoboDogPatrolState() ?? {
-        routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0,
-        checkpointCount: 0, distance: 0, total: 0,
-      });
-      setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
-    };
-    refresh();
-    const timer = window.setInterval(refresh, 250);
-    return () => window.clearInterval(timer);
-  }, [dogStatus]);
   useEffect(() => {
     if (!ready) return;
     controller.current?.setPedestrianCount(pedestrianCount);
@@ -817,25 +806,20 @@ function CampusMap() {
         dogStatus={dogStatus} dogProgress={dogProgress} getDogPreview={getDogPreview}
         onRetryDog={() => { if (controller.current) loadDog(controller.current); }}
         dogSpeed={dogSpeed} dogColor={dogColor} dogFirstPerson={dogFirstPerson}
-        dogPatrol={dogPatrol} patrolRoutes={CUPB_CONFIG.patrolRoutes}
-        additionalDogs={additionalDogs}
+        getPatrolSnapshots={getPatrolSnapshots} patrolRoutes={CUPB_CONFIG.patrolRoutes}
         onAddDog={() => {
           const id = controller.current?.addRoboDog() ?? null;
           if (id === null) notify(locale === 'en' ? 'No safe place to add a dog. Try again shortly.' : '当前没有安全的投放位置，请稍后重试', true);
-          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
           return id;
         }}
-        onRemoveDog={id => { controller.current?.removeRoboDog(id); setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []); }}
+        onRemoveDog={id => { controller.current?.removeRoboDog(id); }}
         onStartAdditionalDog={(id, routeId) => {
           if (!controller.current?.startAdditionalDogPatrol(id, routeId))
             notify(locale === 'en' ? 'Patrol start is crowded. Try again shortly.' : '巡检起点人流密集，请稍后重试', true);
-          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
         }}
-        onStopAdditionalDog={id => { controller.current?.stopAdditionalDogPatrol(id); setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []); }}
+        onStopAdditionalDog={id => { controller.current?.stopAdditionalDogPatrol(id); }}
         onCoordinateFleet={() => {
           const result = controller.current?.startCoordinatedPatrol() ?? { assignments: [], unavailableDogs: [1] };
-          setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol);
-          setAdditionalDogs(controller.current?.getAdditionalDogPatrolStates() ?? []);
           if (!result.assignments.length) notify(locale === 'en' ? 'No patrol route can start safely right now.' : '当前没有可安全启动的巡检路线', true);
           else if (result.unavailableDogs.length) notify(locale === 'en' ? `${result.assignments.length} dogs started; some starting points are occupied.` : `已启动 ${result.assignments.length} 只机器狗，部分起点暂被占用`);
           return result;
@@ -864,12 +848,11 @@ function CampusMap() {
           const c = controller.current;
           if (c?.startRoboDogPatrol(id)) {
             if (!c.getRoboDogState().firstPerson) c.focusRoboDog();
-            setDogPatrol(c.getRoboDogPatrolState());
           } else notify(locale === 'en' ? 'Patrol start is crowded. Try again shortly.' : '巡检起点人流密集，请稍后重试', true);
         }}
-        onPausePatrol={() => { controller.current?.pauseRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}
-        onResumePatrol={() => { controller.current?.resumeRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }}
-        onStopPatrol={() => { controller.current?.stopRoboDogPatrol(); setDogPatrol(controller.current?.getRoboDogPatrolState() ?? dogPatrol); }} />
+        onPausePatrol={() => { controller.current?.pauseRoboDogPatrol(); }}
+        onResumePatrol={() => { controller.current?.resumeRoboDogPatrol(); }}
+        onStopPatrol={() => { controller.current?.stopRoboDogPatrol(); }} />
       <header className="masthead">
         <div className="masthead-brand">
           <button

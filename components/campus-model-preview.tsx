@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dog, PersonStanding, X } from 'lucide-react';
 import * as THREE from 'three';
 import { createWalkingPerson, setWalkingPose } from '@/lib/campus/pedestrian-model';
@@ -10,7 +10,13 @@ import type { PatrolRouteDefinition, PatrolSnapshot } from '@/lib/campus/robo-do
 
 type ModelTab = 'person' | 'dog';
 
-export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, dogSpeed, dogColor, dogFirstPerson, dogPatrol, patrolRoutes, additionalDogs, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog, onAddDog, onRemoveDog, onStartAdditionalDog, onStopAdditionalDog, onCoordinateFleet }: {
+const EMPTY_PATROL: PatrolSnapshot = { routeId: null, status: 'idle', checkpoint: null, checkpointIndex: 0, checkpointCount: 0, distance: 0, total: 0 };
+const samePatrol = (a: PatrolSnapshot, b: PatrolSnapshot) =>
+  a.routeId === b.routeId && a.status === b.status && a.checkpoint === b.checkpoint &&
+  a.checkpointIndex === b.checkpointIndex && a.checkpointCount === b.checkpointCount &&
+  a.distance === b.distance && a.total === b.total && a.detours === b.detours;
+
+export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus, dogProgress, getDogPreview, getPatrolSnapshots, dogSpeed, dogColor, dogFirstPerson, patrolRoutes, onCountChange, onSpeedChange, onRoutesChange, onFocusDog, onDogFirstPersonChange, onDogSpeedChange, onDogColorChange, onStartPatrol, onPausePatrol, onResumePatrol, onStopPatrol, onRetryDog, onAddDog, onRemoveDog, onStartAdditionalDog, onStopAdditionalDog, onCoordinateFleet }: {
   locale: Locale;
   count: number;
   speed: number;
@@ -18,12 +24,11 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   dogStatus: 'loading' | 'ready' | 'error';
   dogProgress: number | null;
   getDogPreview: () => THREE.Object3D | null;
+  getPatrolSnapshots: () => { primary: PatrolSnapshot; additional: (PatrolSnapshot & { id: number })[] };
   dogSpeed: number;
   dogColor: string;
   dogFirstPerson: boolean;
-  dogPatrol: PatrolSnapshot;
   patrolRoutes: PatrolRouteDefinition[];
-  additionalDogs: (PatrolSnapshot & { id: number })[];
   onCountChange: (count: number) => void;
   onSpeedChange: (speed: number) => void;
   onRoutesChange: (show: boolean) => void;
@@ -45,6 +50,8 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   const [tab, setTab] = useState<ModelTab | null>(null);
   const [selectedPatrol, setSelectedPatrol] = useState(patrolRoutes[0]?.id ?? '');
   const [extraRoutes, setExtraRoutes] = useState<Record<number, string>>({});
+  const [dogPatrol, setDogPatrol] = useState<PatrolSnapshot>(EMPTY_PATROL);
+  const [additionalDogs, setAdditionalDogs] = useState<(PatrolSnapshot & { id: number })[]>([]);
   const host = useRef<HTMLDivElement>(null);
   const [dogPreviewError, setDogPreviewError] = useState(false);
   const [dogPreviewLoading, setDogPreviewLoading] = useState(false);
@@ -59,6 +66,20 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
   const fleetTotal = assignedDogs.reduce((sum, dog) => sum + dog.total, 0);
   const distinctRoutes = new Set(assignedDogs.map(dog => dog.routeId)).size;
   const fleetDetours = assignedDogs.reduce((sum, dog) => sum + (dog.detours ?? 0), 0);
+  const refreshPatrol = useCallback(() => {
+    const snapshots = getPatrolSnapshots();
+    setDogPatrol(current => samePatrol(current, snapshots.primary) ? current : snapshots.primary);
+    setAdditionalDogs(current => current.length === snapshots.additional.length &&
+      current.every((dog, i) => dog.id === snapshots.additional[i].id && samePatrol(dog, snapshots.additional[i]))
+      ? current : snapshots.additional);
+  }, [getPatrolSnapshots]);
+
+  useEffect(() => {
+    if (tab !== 'dog' || dogStatus !== 'ready') return;
+    const initial = window.setTimeout(refreshPatrol, 0);
+    const timer = window.setInterval(refreshPatrol, 500);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
+  }, [tab, dogStatus, refreshPatrol]);
 
   useEffect(() => {
     if (tab !== 'person' || !host.current) return;
@@ -69,7 +90,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     camera.position.set(2.7, 2.15, 4.7);
     camera.lookAt(0, 1.05, 0);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = true;
@@ -94,22 +115,37 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     };
     const observer = new ResizeObserver(resize);
     observer.observe(node); resize();
-    let frame = 0;
+    let frame = 0, lastRender = 0, canvasVisible = false;
     const animate = (time: number) => {
-      setWalkingPose(person, time * .006);
-      person.rotation.y = -.35 + Math.sin(time * .0003) * .2;
-      renderer.render(scene, camera);
+      frame = 0;
+      if (!canvasVisible || document.hidden) return;
+      if (time - lastRender >= 1000 / 24) {
+        setWalkingPose(person, time * .006);
+        person.rotation.y = -.35 + Math.sin(time * .0003) * .2;
+        renderer.render(scene, camera);
+        lastRender = time;
+      }
       frame = requestAnimationFrame(animate);
     };
-    frame = requestAnimationFrame(animate);
+    const syncVisibility = () => {
+      if (canvasVisible && !document.hidden && !frame) frame = requestAnimationFrame(animate);
+      else if ((!canvasVisible || document.hidden) && frame) { cancelAnimationFrame(frame); frame = 0; }
+    };
+    const visibilityObserver = new IntersectionObserver(([entry]) => { canvasVisible = entry.isIntersecting; syncVisibility(); },
+      { root: node.closest('.model-preview-panel'), threshold: .01 });
+    visibilityObserver.observe(node);
+    document.addEventListener('visibilitychange', syncVisibility);
     return () => {
       cancelAnimationFrame(frame);
+      visibilityObserver.disconnect();
+      document.removeEventListener('visibilitychange', syncVisibility);
       observer.disconnect();
       scene.traverse(object => {
         if (object instanceof THREE.Mesh) object.geometry.dispose();
       });
       ground.material.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [tab]);
@@ -130,7 +166,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     camera.position.set(1.8, 1.5, 3.4);
     camera.lookAt(.2, 0, 0);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     node.appendChild(renderer.domElement);
@@ -151,6 +187,8 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
     const observer = new ResizeObserver(resize);
     observer.observe(node);
     resize();
+    let visibilityObserver: IntersectionObserver | null = null;
+    let syncVisibility: (() => void) | null = null;
     void (async () => {
       visual = getDogPreview();
       if (!visual) throw new Error('机器狗模型尚未准备好');
@@ -184,21 +222,35 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
       model.add(visual);
       scene.add(model);
       setDogPreviewLoading(false);
-      let lastTime = 0;
+      let lastTime = 0, lastRender = 0, canvasVisible = false;
       const animate = (time: number) => {
-        const dt = lastTime ? Math.min(.08, (time - lastTime) / 1000) : 0;
-        lastTime = time;
-        updateGait?.(dt, patrolStatusRef.current === 'walking' ? 'walking' : patrolStatusRef.current === 'turning' ? 'turning' : 'idle');
-        if (model) model.rotation.y = -.35 + Math.sin(time * .00025) * .3;
-        renderer.render(scene, camera);
+        frame = 0;
+        if (!canvasVisible || document.hidden) return;
+        if (time - lastRender >= 1000 / 24) {
+          const dt = lastTime ? Math.min(.08, (time - lastTime) / 1000) : 0;
+          lastTime = time;
+          updateGait?.(dt, patrolStatusRef.current === 'walking' ? 'walking' : patrolStatusRef.current === 'turning' ? 'turning' : 'idle');
+          if (model) model.rotation.y = -.35 + Math.sin(time * .00025) * .3;
+          renderer.render(scene, camera);
+          lastRender = time;
+        }
         frame = requestAnimationFrame(animate);
       };
-      frame = requestAnimationFrame(animate);
+      syncVisibility = () => {
+        if (canvasVisible && !document.hidden && !frame) frame = requestAnimationFrame(animate);
+        else if ((!canvasVisible || document.hidden) && frame) { cancelAnimationFrame(frame); frame = 0; }
+      };
+      visibilityObserver = new IntersectionObserver(([entry]) => { canvasVisible = entry.isIntersecting; syncVisibility?.(); },
+        { root: node.closest('.model-preview-panel'), threshold: .01 });
+      visibilityObserver.observe(node);
+      document.addEventListener('visibilitychange', syncVisibility);
     })().catch(() => { if (!disposed) { setDogPreviewLoading(false); setDogPreviewError(true); } });
     return () => {
       disposed = true;
       paintRef.current = null;
       cancelAnimationFrame(frame);
+      visibilityObserver?.disconnect();
+      if (syncVisibility) document.removeEventListener('visibilitychange', syncVisibility);
       observer.disconnect();
       visual?.traverse(object => {
         if (object instanceof THREE.Mesh) {
@@ -209,6 +261,7 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
       ground.geometry.dispose();
       ground.material.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [tab, dogStatus, getDogPreview]);
@@ -296,11 +349,11 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                       aria-label={en ? 'Custom robot dog color' : '自定义机器狗颜色'} />
                   </div>
                   <div className="dog-patrol-actions">
-                    <button type="button" onClick={() => onStartPatrol(selectedPatrol)}>{en ? 'Start' : '开始巡检'}</button>
+                    <button type="button" onClick={() => { onStartPatrol(selectedPatrol); refreshPatrol(); }}>{en ? 'Start' : '开始巡检'}</button>
                     {dogPatrol.status === 'paused' ?
-                      <button type="button" onClick={onResumePatrol}>{en ? 'Resume' : '继续'}</button> :
-                      <button type="button" onClick={onPausePatrol} disabled={!['walking', 'turning', 'yielding', 'checking'].includes(dogPatrol.status)}>{en ? 'Pause' : '暂停'}</button>}
-                    <button type="button" onClick={onStopPatrol} disabled={!dogPatrol.routeId}>{en ? 'Stop' : '结束'}</button>
+                      <button type="button" onClick={() => { onResumePatrol(); refreshPatrol(); }}>{en ? 'Resume' : '继续'}</button> :
+                      <button type="button" onClick={() => { onPausePatrol(); refreshPatrol(); }} disabled={!['walking', 'turning', 'yielding', 'checking'].includes(dogPatrol.status)}>{en ? 'Pause' : '暂停'}</button>}
+                    <button type="button" onClick={() => { onStopPatrol(); refreshPatrol(); }} disabled={!dogPatrol.routeId}>{en ? 'Stop' : '结束'}</button>
                   </div>
                   {dogPatrol.routeId && <output className="dog-patrol-progress">
                     <span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding to walkers' : '礼让行人', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dogPatrol.status]} · {dogPatrol.checkpoint}{dogPatrol.detours ? ` · ${en ? 'Detours' : '绕行'} ${dogPatrol.detours}` : ''}</span>
@@ -309,10 +362,11 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                   </output>}
                   <div className="dog-fleet-head">
                     <strong>{en ? 'Patrol dogs' : '巡检机器狗'} · {additionalDogs.length + 1}/4</strong>
-                    <button type="button" onClick={onAddDog} disabled={additionalDogs.length >= 3}>{en ? 'Add dog' : '增加机器狗'}</button>
+                    <button type="button" onClick={() => { onAddDog(); refreshPatrol(); }} disabled={additionalDogs.length >= 3}>{en ? 'Add dog' : '增加机器狗'}</button>
                   </div>
                   <button type="button" className="dog-dispatch-button" onClick={() => {
                     const result = onCoordinateFleet();
+                    refreshPatrol();
                     const primary = result.assignments.find(item => item.dogId === 1);
                     if (primary) setSelectedPatrol(primary.routeId);
                     setExtraRoutes(current => ({ ...current, ...Object.fromEntries(result.assignments.filter(item => item.dogId !== 1).map(item => [item.dogId, item.routeId])) }));
@@ -326,12 +380,12 @@ export function CampusModelPreview({ locale, count, speed, showRoutes, dogStatus
                   {additionalDogs.map(dog => {
                     const routeId = extraRoutes[dog.id] ?? patrolRoutes[(dog.id - 1) % patrolRoutes.length]?.id ?? '';
                     return <div className="dog-fleet-card" key={dog.id}>
-                      <div className="dog-fleet-card-head"><strong>{en ? `Robot dog ${dog.id}` : `机器狗${dog.id}`}</strong><button type="button" onClick={() => onRemoveDog(dog.id)} aria-label={en ? `Remove robot dog ${dog.id}` : `移除机器狗${dog.id}`}>{en ? 'Remove' : '移除'}</button></div>
+                      <div className="dog-fleet-card-head"><strong>{en ? `Robot dog ${dog.id}` : `机器狗${dog.id}`}</strong><button type="button" onClick={() => { onRemoveDog(dog.id); refreshPatrol(); }} aria-label={en ? `Remove robot dog ${dog.id}` : `移除机器狗${dog.id}`}>{en ? 'Remove' : '移除'}</button></div>
                       <label htmlFor={`dog-route-${dog.id}`}>{en ? 'Patrol route' : '巡检路线'}</label>
                       <select id={`dog-route-${dog.id}`} value={routeId} onChange={event => setExtraRoutes(current => ({ ...current, [dog.id]: event.target.value }))}>
                         {patrolRoutes.map(route => <option key={route.id} value={route.id}>{en ? route.nameEn : route.name}</option>)}
                       </select>
-                      <div className="dog-patrol-actions"><button type="button" onClick={() => onStartAdditionalDog(dog.id, routeId)}>{en ? 'Start patrol' : '开始巡检'}</button><button type="button" onClick={() => onStopAdditionalDog(dog.id)} disabled={!dog.routeId}>{en ? 'Stop' : '结束'}</button></div>
+                      <div className="dog-patrol-actions"><button type="button" onClick={() => { onStartAdditionalDog(dog.id, routeId); refreshPatrol(); }}>{en ? 'Start patrol' : '开始巡检'}</button><button type="button" onClick={() => { onStopAdditionalDog(dog.id); refreshPatrol(); }} disabled={!dog.routeId}>{en ? 'Stop' : '结束'}</button></div>
                       {dog.routeId && <output className="dog-patrol-progress"><span>{({ idle: en ? 'Stopped' : '已结束', walking: en ? 'Walking' : '行走中', turning: en ? 'Turning' : '转身中', yielding: en ? 'Yielding' : '礼让中', checking: en ? 'Inspecting' : '停留巡检中', paused: en ? 'Paused' : '已暂停', completed: en ? 'Completed' : '巡检完成', blocked: en ? 'Path blocked' : '道路受阻' } as const)[dog.status]} · {dog.checkpoint}{dog.detours ? ` · ${en ? 'Detours' : '绕行'} ${dog.detours}` : ''}</span><progress max={Math.max(1, dog.total)} value={dog.distance} /></output>}
                     </div>;
                   })}
